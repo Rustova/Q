@@ -1,1 +1,68 @@
-[]
+[
+  {
+    "id": "1749221225177vnx8ao2",
+    "name": "Math",
+    "quizzes": [
+      {
+        "id": "174922124346506hd110",
+        "name": "Study of arithmetic operations ",
+        "questions": [
+          {
+            "questionText": "1  + 2 = 3",
+            "type": "written",
+            "id": "1749221562918qqg0ycr"
+          },
+          {
+            "questionText": "1 + 1",
+            "type": "mcq",
+            "options": [
+              {
+                "id": "option-1749221277320pfena2i-0",
+                "text": "2"
+              },
+              {
+                "id": "option-1749221277320kpb7vqt-1",
+                "text": "3"
+              },
+              {
+                "id": "option-1749221277320x9z49un-2",
+                "text": "4"
+              },
+              {
+                "id": "option-1749221277320l8879xk-3",
+                "text": "1"
+              }
+            ],
+            "correctOptionId": "option-1749221277320pfena2i-0",
+            "id": "174922127732036fy0f2"
+          },
+          {
+            "questionText": "1 - 1",
+            "type": "mcq",
+            "options": [
+              {
+                "id": "option-1749221371951y5k80by-0",
+                "text": "0"
+              },
+              {
+                "id": "option-1749221371951vn6hds2-1",
+                "text": "1"
+              },
+              {
+                "id": "option-17492213719514pq34pd-2",
+                "text": "2"
+              },
+              {
+                "id": "option-1749221371951m8988br-3",
+                "text": "3"
+              }
+            ],
+            "correctOptionId": "option-1749221371951y5k80by-0",
+            "id": "1749221371951488aty5"
+          }
+        ],
+        "isStartable": true
+      }
+    ]
+  }
+]
