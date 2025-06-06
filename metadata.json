@@ -1,0 +1,6 @@
+{
+  "name": "MCQ Quiz App",
+  "description": "An application for admins to create Multiple Choice Questions (MCQs) and for users to take quizzes.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
