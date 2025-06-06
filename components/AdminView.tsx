@@ -14,7 +14,7 @@ const buttonWarningClass = "px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white
 const labelClass = "block text-sm font-medium text-slate-700 mb-1";
 const sectionBaseClass = "bg-white p-4 sm:p-6 rounded-lg shadow-lg border border-slate-200";
 
-const DEFAULT_PAT = "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";
+// const DEFAULT_PAT = "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"; // No longer primary source
 
 interface GitHubRepoInfo {
   owner: string;
@@ -95,10 +95,27 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
   const [editQuizNameValue, setEditQuizNameValue] = useState('');
   const [showDataManagementSection, setShowDataManagementSection] = useState(true);
 
+  const [userPat, setUserPat] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   
   const isDataSavingConfigured = AppConfig.GITHUB_DATA_URL && AppConfig.GITHUB_DATA_URL !== PLACEHOLDER_GITHUB_DATA_URL;
+
+  useEffect(() => {
+    const storedPat = localStorage.getItem('githubPat');
+    if (storedPat) {
+      setUserPat(storedPat);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userPat) {
+      localStorage.setItem('githubPat', userPat);
+    } else {
+      localStorage.removeItem('githubPat'); // Remove if PAT is cleared
+    }
+  }, [userPat]);
+
 
   useEffect(() => {
     setEditSubjectNameValue(activeAdminSubject?.name || '');
@@ -114,8 +131,8 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
       return;
     }
     
-    if (!DEFAULT_PAT.trim()) { // Should ideally not happen if DEFAULT_PAT is a non-empty const
-      setSaveStatus({ message: 'Internal Error: GitHub Personal Access Token is missing. Saving is disabled.', type: 'error' });
+    if (!userPat.trim()) {
+      setSaveStatus({ message: 'GitHub Personal Access Token is required. Please enter your PAT to enable saving.', type: 'error' });
       return;
     }
 
@@ -130,7 +147,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
 
     const apiUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/contents/${repoInfo.path}`;
     const baseHeaders = {
-      Authorization: `token ${DEFAULT_PAT}`,
+      Authorization: `token ${userPat}`,
       Accept: 'application/vnd.github.v3+json',
     };
 
@@ -201,7 +218,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
         }
 
         setSaveStatus({ message: 'Data saved successfully!', type: 'success' });
-        console.log("Data saved to GitHub:", await saveResponse.json()); // Internal log can keep GitHub
+        console.log("Data saved to GitHub:", await saveResponse.json()); 
         setIsSaving(false);
         return; 
 
@@ -215,7 +232,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
       }
     } 
 
-    console.error('Save Error after all attempts:', lastError); // Internal log
+    console.error('Save Error after all attempts:', lastError); 
     let friendlyMessage = `Error saving data: ${lastError?.message || 'Unknown error during save operation.'}`;
     if (lastError?.status === 401 || (lastError?.message && lastError.message.includes('401'))) {
         let repoDetailsMsg = "the target repository";
@@ -223,19 +240,19 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
             repoDetailsMsg = `the '${repoInfo.owner}/${repoInfo.repo}' repository`;
         }
         friendlyMessage = `Authentication Error (401): Bad credentials.
-The configured GitHub Personal Access Token is invalid. Please verify:
+The GitHub Personal Access Token you entered is invalid. Please verify:
 1. Is the token correct and still valid (not expired or revoked)?
 2. Does it have the required permissions for ${repoDetailsMsg}?
    - For Classic PATs: The 'repo' scope is typically needed.
    - For Fine-Grained PATs: 'Contents: Read & Write' permission specifically for ${repoDetailsMsg}.
-If the token is incorrect, it needs to be updated in the application's source code.`;
+Please correct the PAT and try saving again.`;
     } else if (lastError?.message && lastError.message.includes('409') && (lastError.message.toLowerCase().includes('match') || lastError.message.toLowerCase().includes('conflict'))) {
       friendlyMessage = "Error: The file on the server was changed. Save attempts failed due to conflicts. Please reload the page to get the latest data and re-apply your changes, then try saving again.";
     }
     setSaveStatus({ message: friendlyMessage, type: 'error' });
     setIsSaving(false);
 
-  }, [subjects, isDataSavingConfigured]);
+  }, [subjects, isDataSavingConfigured, userPat]);
 
 
   const handleCreateSubject = () => {
@@ -473,11 +490,25 @@ If the token is incorrect, it needs to be updated in the application's source co
                          </div>
                     ) : (
                         <div className="space-y-4">
-                           {/* PAT Input field removed */}
+                            <div>
+                                <label htmlFor="githubPatInput" className={labelClass}>GitHub Personal Access Token (PAT)</label>
+                                <input 
+                                    type="password"
+                                    id="githubPatInput"
+                                    value={userPat}
+                                    onChange={(e) => setUserPat(e.target.value)}
+                                    className={inputClass}
+                                    placeholder="Enter your GitHub PAT"
+                                    aria-describedby="pat-helper-text"
+                                />
+                                <p id="pat-helper-text" className="text-xs text-slate-500 mt-1">
+                                    Your PAT is stored in browser localStorage. It needs 'repo' scope (Classic PAT) or 'Contents: Read & Write' (Fine-Grained PAT) for the target repository.
+                                </p>
+                            </div>
                             <button 
                                 onClick={handleSaveData} 
                                 className={`${buttonPrimaryClass} w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed`}
-                                disabled={isSaving || !isDataSavingConfigured}
+                                disabled={isSaving || !isDataSavingConfigured || !userPat.trim()}
                                 aria-label="Save data"
                             >
                                 {isSaving ? (
@@ -507,7 +538,7 @@ If the token is incorrect, it needs to be updated in the application's source co
                         Saving Your Work
                     </h4>
                     <p className="text-xs text-sky-600">
-                        Manage your subjects, quizzes, and questions using the sections above. If GitHub saving is configured, click 'Save' to store all changes using the pre-configured token.
+                        Manage your subjects, quizzes, and questions using the sections above. If GitHub saving is configured, enter your PAT and click 'Save' to store all changes.
                     </p>
                 </div>
             </div>
