@@ -14,8 +14,6 @@ const buttonWarningClass = "px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white
 const labelClass = "block text-sm font-medium text-slate-700 mb-1";
 const sectionBaseClass = "bg-white p-4 sm:p-6 rounded-lg shadow-lg border border-slate-200";
 
-// const DEFAULT_PAT = "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"; // No longer primary source
-
 interface GitHubRepoInfo {
   owner: string;
   repo: string;
@@ -23,27 +21,53 @@ interface GitHubRepoInfo {
   path: string;
 }
 
-// Helper function to parse GitHub raw URL
-const parseRawGitHubUrl = (url: string): GitHubRepoInfo | null => {
+// Helper function to parse GitHub URL (raw or blob)
+const parseGitHubUrl = (url: string): GitHubRepoInfo | null => {
+  if (!url) {
+    console.error('GitHub URL is null or empty.');
+    return null;
+  }
   try {
     const urlObj = new URL(url);
-    if (urlObj.hostname !== 'raw.githubusercontent.com') {
-      console.error('Invalid GitHub Raw URL: Must be from raw.githubusercontent.com');
-      return null;
+
+    // Pattern 1: Raw content URL (raw.githubusercontent.com)
+    // e.g., https://raw.githubusercontent.com/OWNER/REPO/BRANCH/PATH/TO/FILE.json
+    if (urlObj.hostname === 'raw.githubusercontent.com') {
+      const pathSegments = urlObj.pathname.split('/').filter(Boolean);
+      if (pathSegments.length < 4) {
+        console.error('Invalid GitHub Raw URL: Path too short. Expected owner/repo/branch/path... Given:', url);
+        return null;
+      }
+      return {
+        owner: pathSegments[0],
+        repo: pathSegments[1],
+        branch: pathSegments[2],
+        path: pathSegments.slice(3).join('/'),
+      };
     }
-    const pathSegments = urlObj.pathname.split('/').filter(Boolean); // e.g., ['owner', 'repo', 'branch', 'path', 'to', 'file.json']
-    if (pathSegments.length < 4) {
-      console.error('Invalid GitHub Raw URL: Path too short.');
-      return null;
+
+    // Pattern 2: Blob URL (github.com)
+    // e.g., https://github.com/OWNER/REPO/blob/BRANCH/PATH/TO/FILE.json
+    if (urlObj.hostname === 'github.com') {
+      // Regex: /<owner>/<repo>/blob/<branch>/<path_to_file>
+      const blobPattern = /^\/([^\/]+)\/([^\/]+)\/blob\/([^\/]+)\/(.+)$/;
+      const blobMatch = urlObj.pathname.match(blobPattern);
+
+      if (blobMatch) {
+        const [, owner, repo, branch, path] = blobMatch;
+        return {
+          owner,
+          repo,
+          branch,
+          path: path.replace(/\?.*$/, ""), // Clean query params from path if any
+        };
+      }
     }
-    return {
-      owner: pathSegments[0],
-      repo: pathSegments[1],
-      branch: pathSegments[2],
-      path: pathSegments.slice(3).join('/'),
-    };
+
+    console.warn(`URL (${url}) is not a recognized GitHub raw or blob URL for saving. Saving via GitHub API might fail.`);
+    return null;
   } catch (error) {
-    console.error('Error parsing GitHub URL:', error);
+    console.error('Error parsing GitHub URL for saving:', url, error);
     return null;
   }
 };
@@ -136,9 +160,9 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
       return;
     }
 
-    const repoInfo = parseRawGitHubUrl(AppConfig.GITHUB_DATA_URL);
+    const repoInfo = parseGitHubUrl(AppConfig.GITHUB_DATA_URL);
     if (!repoInfo) {
-      setSaveStatus({ message: 'Invalid Data URL in AppConfig. Could not parse repository details.', type: 'error' });
+      setSaveStatus({ message: `Invalid Data URL in AppConfig or unsupported format: ${AppConfig.GITHUB_DATA_URL}. Could not parse repository details.`, type: 'error' });
       return;
     }
 
