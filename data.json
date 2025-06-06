@@ -96,6 +96,18 @@
           }
         ],
         "isStartable": false
+      },
+      {
+        "id": "1749222346599xfud83y",
+        "name": "الدرس الثاني",
+        "questions": [
+          {
+            "questionText": "انت خول؟",
+            "type": "written",
+            "id": "17492223727911g8nkcy"
+          }
+        ],
+        "isStartable": false
       }
     ]
   }
