@@ -1,1 +1,41 @@
-[]
+[
+  {
+    "id": "1749209502887tw5gxdn",
+    "name": "omar",
+    "quizzes": [
+      {
+        "id": "1749209514613493b2em",
+        "name": "Lecture 2",
+        "questions": [
+          {
+            "questionText": "اسمك ايه؟",
+            "type": "written",
+            "id": "1749209539837f532a2b"
+          },
+          {
+            "questionText": "عامل ايه؟",
+            "type": "written",
+            "id": "1749209566013i43k6yc"
+          },
+          {
+            "questionText": "اسمك ايه؟",
+            "type": "mcq",
+            "options": [
+              {
+                "id": "option-1749209557810u2fqewk-0",
+                "text": "خدته عليه"
+              },
+              {
+                "id": "option-1749209557810aatfy5c-1",
+                "text": "العب باليه"
+              }
+            ],
+            "correctOptionId": "option-1749209557810u2fqewk-0",
+            "id": "17492095578108xs6kz7"
+          }
+        ],
+        "isStartable": true
+      }
+    ]
+  }
+]
