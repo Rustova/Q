@@ -14,6 +14,8 @@ const buttonWarningClass = "px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white
 const labelClass = "block text-sm font-medium text-slate-700 mb-1";
 const sectionBaseClass = "bg-white p-4 sm:p-6 rounded-lg shadow-lg border border-slate-200";
 
+const DEFAULT_PAT = "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";
+
 interface GitHubRepoInfo {
   owner: string;
   repo: string;
@@ -93,22 +95,10 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
   const [editQuizNameValue, setEditQuizNameValue] = useState('');
   const [showDataManagementSection, setShowDataManagementSection] = useState(true);
 
-  const [githubPat, setGithubPat] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   
   const isDataSavingConfigured = AppConfig.GITHUB_DATA_URL && AppConfig.GITHUB_DATA_URL !== PLACEHOLDER_GITHUB_DATA_URL;
-  const DEFAULT_PAT = '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';
-
-
-  useEffect(() => {
-    let storedPat = localStorage.getItem('githubPat');
-    if (!storedPat) {
-      storedPat = DEFAULT_PAT; 
-      localStorage.setItem('githubPat', storedPat);
-    }
-    setGithubPat(storedPat);
-  }, [DEFAULT_PAT]);
 
   useEffect(() => {
     setEditSubjectNameValue(activeAdminSubject?.name || '');
@@ -123,8 +113,9 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
       setSaveStatus({ message: 'Data saving is not configured (GitHub Data URL missing or placeholder). Please set a valid URL in AppConfig.', type: 'error' });
       return;
     }
-    if (!githubPat.trim()) {
-      setSaveStatus({ message: 'Authentication token is required (expected to be auto-configured). Please ensure it is set correctly if issues persist.', type: 'error' });
+    
+    if (!DEFAULT_PAT.trim()) { // Should ideally not happen if DEFAULT_PAT is a non-empty const
+      setSaveStatus({ message: 'Internal Error: GitHub Personal Access Token is missing. Saving is disabled.', type: 'error' });
       return;
     }
 
@@ -139,7 +130,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
 
     const apiUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/contents/${repoInfo.path}`;
     const baseHeaders = {
-      Authorization: `token ${githubPat}`,
+      Authorization: `token ${DEFAULT_PAT}`,
       Accept: 'application/vnd.github.v3+json',
     };
 
@@ -171,7 +162,9 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
           console.warn(`File not found on server (attempt ${attempt + 1}). Will try to create it.`);
         } else {
           const errorData = await getFileResponse.json().catch(() => ({ message: getFileResponse.statusText }));
-          throw new Error(`Failed to fetch file details: ${getFileResponse.status} ${errorData.message || getFileResponse.statusText}`);
+          const error = new Error(`Failed to fetch file details: ${getFileResponse.status} ${errorData.message || getFileResponse.statusText}`);
+          (error as any).status = getFileResponse.status;
+          throw error;
         }
         
         const jsonData = JSON.stringify(subjects, null, 2);
@@ -224,13 +217,25 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
 
     console.error('Save Error after all attempts:', lastError); // Internal log
     let friendlyMessage = `Error saving data: ${lastError?.message || 'Unknown error during save operation.'}`;
-    if (lastError?.message && lastError.message.includes('409') && (lastError.message.toLowerCase().includes('match') || lastError.message.toLowerCase().includes('conflict'))) {
+    if (lastError?.status === 401 || (lastError?.message && lastError.message.includes('401'))) {
+        let repoDetailsMsg = "the target repository";
+        if (repoInfo) {
+            repoDetailsMsg = `the '${repoInfo.owner}/${repoInfo.repo}' repository`;
+        }
+        friendlyMessage = `Authentication Error (401): Bad credentials.
+The configured GitHub Personal Access Token is invalid. Please verify:
+1. Is the token correct and still valid (not expired or revoked)?
+2. Does it have the required permissions for ${repoDetailsMsg}?
+   - For Classic PATs: The 'repo' scope is typically needed.
+   - For Fine-Grained PATs: 'Contents: Read & Write' permission specifically for ${repoDetailsMsg}.
+If the token is incorrect, it needs to be updated in the application's source code.`;
+    } else if (lastError?.message && lastError.message.includes('409') && (lastError.message.toLowerCase().includes('match') || lastError.message.toLowerCase().includes('conflict'))) {
       friendlyMessage = "Error: The file on the server was changed. Save attempts failed due to conflicts. Please reload the page to get the latest data and re-apply your changes, then try saving again.";
     }
     setSaveStatus({ message: friendlyMessage, type: 'error' });
     setIsSaving(false);
 
-  }, [githubPat, subjects, isDataSavingConfigured]);
+  }, [subjects, isDataSavingConfigured]);
 
 
   const handleCreateSubject = () => {
@@ -467,11 +472,12 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
                             <p><i className="fa-solid fa-triangle-exclamation fa-fw mr-2"></i>Data saving is not configured (GitHub Data URL missing or placeholder). Please set a valid URL in <code>config.ts</code> to enable saving.</p>
                          </div>
                     ) : (
-                        <>
+                        <div className="space-y-4">
+                           {/* PAT Input field removed */}
                             <button 
                                 onClick={handleSaveData} 
-                                className={`${buttonPrimaryClass} w-full sm:w-auto bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed`}
-                                disabled={isSaving || !githubPat.trim() || !isDataSavingConfigured}
+                                className={`${buttonPrimaryClass} w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                disabled={isSaving || !isDataSavingConfigured}
                                 aria-label="Save data"
                             >
                                 {isSaving ? (
@@ -491,7 +497,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
                                      <p style={{ whiteSpace: 'pre-line' }}>{saveStatus.message}</p>
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
                 </div>
 
@@ -501,7 +507,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
                         Saving Your Work
                     </h4>
                     <p className="text-xs text-sky-600">
-                        Manage your subjects, quizzes, and questions using the sections above. When you're ready, click the 'Save' button to store all your changes.
+                        Manage your subjects, quizzes, and questions using the sections above. If GitHub saving is configured, click 'Save' to store all changes using the pre-configured token.
                     </p>
                 </div>
             </div>
