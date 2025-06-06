@@ -64,5 +64,39 @@
         "isStartable": true
       }
     ]
+  },
+  {
+    "id": "1749222270174wh7a1ly",
+    "name": "احياء",
+    "quizzes": [
+      {
+        "id": "17492222983737jj9uzf",
+        "name": "الدرس الاول",
+        "questions": [
+          {
+            "questionText": "اسمك ايه؟",
+            "type": "written",
+            "id": "1749222310041d72s98s"
+          },
+          {
+            "questionText": "عمرك كام",
+            "type": "mcq",
+            "options": [
+              {
+                "id": "option-1749222326966cedmpur-0",
+                "text": "٢٠"
+              },
+              {
+                "id": "option-17492223269661l9zt90-1",
+                "text": "٢١"
+              }
+            ],
+            "correctOptionId": "option-1749222326966cedmpur-0",
+            "id": "1749222326965hrr61mp"
+          }
+        ],
+        "isStartable": false
+      }
+    ]
   }
 ]
