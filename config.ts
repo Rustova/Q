@@ -1,17 +1,15 @@
 // config.ts
+
+export const PLACEHOLDER_GITHUB_DATA_URL = 'YOUR_GITHUB_RAW_DATA_JSON_URL_HERE_OR_LEAVE_EMPTY_TO_ALWAYS_USE_LOCAL_FALLBACK';
+
 interface Config {
-  GOOGLE_DRIVE_FILE_ID: string;
-  GOOGLE_CLIENT_ID: string; // Obtain this from Google Cloud Console for OAuth 2.0
+  GITHUB_DATA_URL: string; // The raw URL to the data.json file on GitHub
   DEFAULT_THEME: 'light' | 'dark';
 }
 
 const AppConfig: Config = {
-    GOOGLE_DRIVE_FILE_ID: '1g24O5xWlZEuxTXcBI_XRlBMdLiOPZ7XJ', // The file ID you provided
-    GOOGLE_CLIENT_ID: '646728266270-tmlq2qc1camj2sudsk6v74fala3m9gu7.apps.googleusercontent.com', // Replace with your actual Google Cloud Client ID
+    GITHUB_DATA_URL: 'https://raw.githubusercontent.com/Rustova/Q/main/data.json',
     DEFAULT_THEME: 'dark'
 };
-
-// Define placeholder constants for comparison in App.tsx
-export const PLACEHOLDER_GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE';
 
 export default AppConfig;

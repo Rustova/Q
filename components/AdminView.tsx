@@ -1,9 +1,10 @@
 
-import React, { useState, ChangeEvent, useRef } from 'react';
+import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
 import type { Subject, Quiz, Question } from '../App.tsx';
 import QuestionForm from './QuestionForm.tsx';
 import AdminQuestionListItem from './AdminQuestionListItem.tsx';
 import HoldToDeleteButton from './HoldToDeleteButton.tsx';
+import AppConfig, { PLACEHOLDER_GITHUB_DATA_URL } from '../config.ts';
 
 // Common classes
 const inputClass = "w-full p-3 border border-slate-600 rounded-md bg-slate-700 text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-slate-400";
@@ -12,6 +13,39 @@ const buttonPrimaryClass = "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white r
 const buttonWarningClass = "px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-md transition-colors text-sm whitespace-nowrap shrink-0";
 const labelClass = "block text-sm font-medium text-slate-700 mb-1";
 const sectionBaseClass = "bg-white p-4 sm:p-6 rounded-lg shadow-lg border border-slate-200";
+
+interface GitHubRepoInfo {
+  owner: string;
+  repo: string;
+  branch: string;
+  path: string;
+}
+
+// Helper function to parse GitHub raw URL
+const parseRawGitHubUrl = (url: string): GitHubRepoInfo | null => {
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname !== 'raw.githubusercontent.com') {
+      console.error('Invalid GitHub Raw URL: Must be from raw.githubusercontent.com');
+      return null;
+    }
+    const pathSegments = urlObj.pathname.split('/').filter(Boolean); // e.g., ['owner', 'repo', 'branch', 'path', 'to', 'file.json']
+    if (pathSegments.length < 4) {
+      console.error('Invalid GitHub Raw URL: Path too short.');
+      return null;
+    }
+    return {
+      owner: pathSegments[0],
+      repo: pathSegments[1],
+      branch: pathSegments[2],
+      path: pathSegments.slice(3).join('/'),
+    };
+  } catch (error) {
+    console.error('Error parsing GitHub URL:', error);
+    return null;
+  }
+};
+
 
 interface AdminViewProps {
   subjects: Subject[];
@@ -39,9 +73,6 @@ interface AdminViewProps {
   setShowManageQuizzesSection: (show: boolean) => void;
   activeAdminSubject: Subject | undefined;
   activeAdminQuiz: Quiz | undefined;
-  onSaveChanges: (currentSubjects: Subject[]) => Promise<void>;
-  isSaving: boolean;
-  saveMessage: string | null;
 }
 
 const AdminView: React.FC<AdminViewProps> = (props) => {
@@ -53,8 +84,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
     maxOptions,
     showManageSubjectsSection, setShowManageSubjectsSection,
     showManageQuizzesSection, setShowManageQuizzesSection,
-    activeAdminSubject, activeAdminQuiz,
-    onSaveChanges, isSaving, saveMessage
+    activeAdminSubject, activeAdminQuiz
   } = props;
 
   const [newSubjectName, setNewSubjectName] = useState('');
@@ -63,14 +93,144 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
   const [editQuizNameValue, setEditQuizNameValue] = useState('');
   const [showDataManagementSection, setShowDataManagementSection] = useState(true);
 
+  const [githubPat, setGithubPat] = useState<string>('');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [saveStatus, setSaveStatus] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  
+  const isDataSavingConfigured = AppConfig.GITHUB_DATA_URL && AppConfig.GITHUB_DATA_URL !== PLACEHOLDER_GITHUB_DATA_URL;
+  const DEFAULT_PAT = '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';
 
-  React.useEffect(() => {
+
+  useEffect(() => {
+    let storedPat = localStorage.getItem('githubPat');
+    if (!storedPat) {
+      storedPat = DEFAULT_PAT; 
+      localStorage.setItem('githubPat', storedPat);
+    }
+    setGithubPat(storedPat);
+  }, [DEFAULT_PAT]);
+
+  useEffect(() => {
     setEditSubjectNameValue(activeAdminSubject?.name || '');
   }, [activeAdminSubject]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setEditQuizNameValue(activeAdminQuiz?.name || '');
   }, [activeAdminQuiz]);
+
+  const handleSaveData = useCallback(async () => {
+    if (!isDataSavingConfigured) {
+      setSaveStatus({ message: 'Data saving is not configured (GitHub Data URL missing or placeholder). Please set a valid URL in AppConfig.', type: 'error' });
+      return;
+    }
+    if (!githubPat.trim()) {
+      setSaveStatus({ message: 'Authentication token is required (expected to be auto-configured). Please ensure it is set correctly if issues persist.', type: 'error' });
+      return;
+    }
+
+    const repoInfo = parseRawGitHubUrl(AppConfig.GITHUB_DATA_URL);
+    if (!repoInfo) {
+      setSaveStatus({ message: 'Invalid Data URL in AppConfig. Could not parse repository details.', type: 'error' });
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveStatus({ message: 'Preparing to save data...', type: 'info' });
+
+    const apiUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/contents/${repoInfo.path}`;
+    const baseHeaders = {
+      Authorization: `token ${githubPat}`,
+      Accept: 'application/vnd.github.v3+json',
+    };
+
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt < 2; attempt++) { // 0 = first try, 1 = retry
+      try {
+        if (attempt > 0) {
+          setSaveStatus({ message: `Conflict detected. Retrying save (Attempt ${attempt + 1}/2)...`, type: 'info' });
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); // Wait with jitter
+        } else {
+            setSaveStatus({ message: 'Processing save request...', type: 'info' });
+        }
+
+        setSaveStatus(prev => ({ ...(prev || {type: 'info', message: ''}), message: `${attempt > 0 ? 'Retry: ' : ''}Fetching current file details...`}));
+        
+        const getFileResponse = await fetch(`${apiUrl}?ref=${repoInfo.branch}&timestamp=${Date.now()}`, { 
+            headers: { 
+                Authorization: baseHeaders.Authorization, 
+                Accept: baseHeaders.Accept 
+            } 
+        });
+
+        let currentSha: string | undefined = undefined;
+        if (getFileResponse.ok) {
+          const fileData = await getFileResponse.json();
+          currentSha = fileData.sha;
+        } else if (getFileResponse.status === 404) {
+          console.warn(`File not found on server (attempt ${attempt + 1}). Will try to create it.`);
+        } else {
+          const errorData = await getFileResponse.json().catch(() => ({ message: getFileResponse.statusText }));
+          throw new Error(`Failed to fetch file details: ${getFileResponse.status} ${errorData.message || getFileResponse.statusText}`);
+        }
+        
+        const jsonData = JSON.stringify(subjects, null, 2);
+        const contentBase64 = btoa(unescape(encodeURIComponent(jsonData))); 
+
+        const payload: { message: string; content: string; branch: string; sha?: string; } = {
+          message: 'Quiz App: Update data.json via Web Editor', // Commit message (internal)
+          content: contentBase64,
+          branch: repoInfo.branch,
+        };
+        if (currentSha) {
+          payload.sha = currentSha;
+        }
+        
+        setSaveStatus(prev => ({ ...(prev || {type: 'info', message: ''}), message: `${attempt > 0 ? 'Retry: ' : ''}${currentSha ? 'Saving updates...' : 'Creating new file on server...'}`}));
+        
+        const saveResponse = await fetch(apiUrl, {
+          method: 'PUT',
+          headers: { ...baseHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!saveResponse.ok) {
+          const errorData = await saveResponse.json().catch(() => ({ message: saveResponse.statusText }));
+          const error = new Error(`Failed to save data: ${saveResponse.status} ${errorData.message || saveResponse.statusText}`);
+          (error as any).status = saveResponse.status; 
+
+          if (saveResponse.status === 409 && attempt < 1) { 
+            lastError = error; 
+            console.warn(`Save conflict (409) on attempt ${attempt + 1}. Retrying.`);
+            continue; 
+          }
+          throw error; 
+        }
+
+        setSaveStatus({ message: 'Data saved successfully!', type: 'success' });
+        console.log("Data saved to GitHub:", await saveResponse.json()); // Internal log can keep GitHub
+        setIsSaving(false);
+        return; 
+
+      } catch (error: any) {
+        lastError = error; 
+        if ((error as any).status === 409 && attempt < 1) {
+             console.warn(`Caught save conflict (409) on attempt ${attempt + 1} during error handling. Retrying.`);
+             continue; 
+        }
+        break; 
+      }
+    } 
+
+    console.error('Save Error after all attempts:', lastError); // Internal log
+    let friendlyMessage = `Error saving data: ${lastError?.message || 'Unknown error during save operation.'}`;
+    if (lastError?.message && lastError.message.includes('409') && (lastError.message.toLowerCase().includes('match') || lastError.message.toLowerCase().includes('conflict'))) {
+      friendlyMessage = "Error: The file on the server was changed. Save attempts failed due to conflicts. Please reload the page to get the latest data and re-apply your changes, then try saving again.";
+    }
+    setSaveStatus({ message: friendlyMessage, type: 'error' });
+    setIsSaving(false);
+
+  }, [githubPat, subjects, isDataSavingConfigured]);
 
 
   const handleCreateSubject = () => {
@@ -113,9 +273,6 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
     }
   };
 
-  const handleSaveChangesClick = () => {
-    onSaveChanges(subjects);
-  };
 
   return (
     <section className="space-y-6 sm:space-y-8">
@@ -305,44 +462,47 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
         {showDataManagementSection && (
             <div id="data-management-content" className="space-y-4 pt-2">
                 <div>
-                    <h3 className="text-lg font-medium text-slate-700 mb-2">Synchronize Data with Cloud (Google Drive)</h3>
-                    <p className="text-sm text-slate-600 mb-3">
-                        Save all current subjects, quizzes, and questions to a specific file in Google Drive.
-                        This will update the data source for all users once Google Sign-In and Drive API calls are implemented.
-                    </p>
-                    <button 
-                        onClick={handleSaveChangesClick} 
-                        className={`${buttonPrimaryClass} w-full sm:w-auto bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed`}
-                        disabled={isSaving}
-                    >
-                        {isSaving ? (
-                            <><i className="fa-solid fa-spinner fa-spin fa-fw"></i><span>Saving...</span></>
-                        ) : (
-                            <><i className="fa-solid fa-cloud-arrow-up fa-fw"></i><span>Save Changes to Google Drive</span></>
-                        )}
-                    </button>
+                    {!isDataSavingConfigured ? (
+                         <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-md text-yellow-700 text-sm">
+                            <p><i className="fa-solid fa-triangle-exclamation fa-fw mr-2"></i>Data saving is not configured (GitHub Data URL missing or placeholder). Please set a valid URL in <code>config.ts</code> to enable saving.</p>
+                         </div>
+                    ) : (
+                        <>
+                            <button 
+                                onClick={handleSaveData} 
+                                className={`${buttonPrimaryClass} w-full sm:w-auto bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed`}
+                                disabled={isSaving || !githubPat.trim() || !isDataSavingConfigured}
+                                aria-label="Save data"
+                            >
+                                {isSaving ? (
+                                    <><i className="fa-solid fa-spinner fa-spin fa-fw"></i><span>Saving...</span></>
+                                ) : (
+                                    <><i className="fa-solid fa-floppy-disk fa-fw"></i><span>Save</span></>
+                                )}
+                            </button>
+
+                            {saveStatus && (
+                                <div className={`mt-3 p-3 rounded-md text-sm ${
+                                    saveStatus.type === 'error' ? 'bg-red-100 text-red-700 border border-red-300' :
+                                    saveStatus.type === 'success' ? 'bg-green-100 text-green-700 border border-green-300' :
+                                    'bg-blue-100 text-blue-700 border border-blue-300' // for 'info'
+                                }`} role="alert"
+                                >
+                                     <p style={{ whiteSpace: 'pre-line' }}>{saveStatus.message}</p>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
-                {saveMessage && (
-                    <div className={`mt-3 p-3 rounded-md text-sm ${saveMessage.toLowerCase().includes("error") || saveMessage.toLowerCase().includes("not yet implemented") || saveMessage.toLowerCase().includes("incomplete") ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-green-100 text-green-700 border border-green-300'}`}
-                         role="alert"
-                    >
-                         <p style={{ whiteSpace: 'pre-line' }}>{saveMessage}</p>
-                    </div>
-                )}
 
                 <div className="p-3 bg-sky-50 border border-sky-200 rounded-md mt-4">
                     <h4 className="text-sm font-semibold text-sky-700 mb-1 flex items-center">
                         <i className="fa-solid fa-circle-info fa-fw mr-2"></i>
-                        How it Works (Future State)
+                        Saving Your Work
                     </h4>
-                    <ul className="list-disc list-inside text-xs text-sky-600 space-y-1 pl-4">
-                        <li>The application will require users to "Sign in with Google".</li>
-                        <li>Clicking "Save Changes to Google Drive" will send data to a specific <code>data.json</code> file in the authenticated user's Google Drive (or a shared Drive file if permissions allow).</li>
-                        <li>The application will load data from this Google Drive file on startup (after user signs in).</li>
-                        <li>Ensure <code>GOOGLE_DRIVE_FILE_ID</code> and <code>GOOGLE_CLIENT_ID</code> are correctly configured in <code>config.ts</code>.</li>
-                        <li>The <code>data.json</code> in the project repository acts as a fallback if cloud access fails or is not yet configured/signed-in.</li>
-                        <li>This direct Google Drive integration replaces the previous Google Apps Script method.</li>
-                    </ul>
+                    <p className="text-xs text-sky-600">
+                        Manage your subjects, quizzes, and questions using the sections above. When you're ready, click the 'Save' button to store all your changes.
+                    </p>
                 </div>
             </div>
         )}
