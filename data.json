@@ -95,7 +95,7 @@
             "id": "1749222326965hrr61mp"
           }
         ],
-        "isStartable": false
+        "isStartable": true
       },
       {
         "id": "1749222346599xfud83y",
@@ -107,7 +107,7 @@
             "id": "17492223727911g8nkcy"
           }
         ],
-        "isStartable": false
+        "isStartable": true
       }
     ]
   }
