@@ -10,7 +10,7 @@ const SubjectSelectionView: React.FC<SubjectSelectionViewProps> = ({ subjects, o
   return (
     <section className="bg-white p-4 sm:p-6 rounded-lg shadow-xl border border-slate-200">
       <h2 className="text-2xl sm:text-3xl font-semibold text-blue-600 text-center mb-6 sm:mb-8 pb-4 border-b border-slate-200">
-        Select a Subject
+        Select subject
       </h2>
       {subjects.length === 0 ? (
         <p className="text-lg text-slate-600 text-center py-6">

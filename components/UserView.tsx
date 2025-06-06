@@ -1,18 +1,23 @@
+
 import React from 'react';
-import type { Quiz, Question as QuestionType } from '../App.tsx';
+import type { Quiz } from '../App.tsx';
 import QuestionDisplay from './QuestionDisplay.tsx';
+// import Clock from './Clock.tsx'; // REMOVED
 
 interface UserViewProps {
   quiz: Quiz;
   currentQuestionIndex: number;
   selectedOptionId: string | null;
-  feedback: string | null; // 'Correct' | 'Incorrect'
+  feedback: string | null; 
   isSubmitted: boolean;
   isQuizComplete: boolean;
   onOptionSelect: (optionId: string) => void;
   onSubmitAnswer: () => void;
   onNextQuestion: () => void;
   onBackToQuizList: () => void;
+  // initialTimeSeconds?: number; // REMOVED
+  // onTimeUp?: () => void; // REMOVED
+  // isTimeUp?: boolean; // REMOVED
 }
 
 const UserView: React.FC<UserViewProps> = ({
@@ -26,6 +31,9 @@ const UserView: React.FC<UserViewProps> = ({
   onSubmitAnswer,
   onNextQuestion,
   onBackToQuizList,
+  // initialTimeSeconds, // REMOVED
+  // onTimeUp, // REMOVED
+  // isTimeUp, // REMOVED
 }) => {
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const isWrittenQuestion = currentQuestion?.type === 'written';
@@ -45,6 +53,8 @@ const UserView: React.FC<UserViewProps> = ({
         </button>
       </div>
 
+      {/* Timer Display REMOVED */}
+
       {quiz.questions.length === 0 ? (
         <div className="text-center py-6">
           <p className="text-lg text-slate-600">This quiz has no questions yet.</p>
@@ -53,6 +63,7 @@ const UserView: React.FC<UserViewProps> = ({
         <div className="text-center py-6">
           <p className="text-2xl font-semibold text-green-600">Quiz Complete!</p>
           <p className="text-slate-600 mt-2">You've answered all available questions for "{quiz.name}".</p>
+           {/* {isTimeUp && <p className="text-red-600 font-semibold mt-2">You ran out of time.</p>} REMOVED */}
         </div>
       ) : currentQuestion ? (
         <>
@@ -60,10 +71,10 @@ const UserView: React.FC<UserViewProps> = ({
             question={currentQuestion}
             questionNumber={currentQuestionIndex + 1}
             selectedOptionId={selectedOptionId}
-            isSubmitted={isSubmitted}
+            isSubmitted={isSubmitted} 
             onOptionSelect={onOptionSelect}
           />
-          {isSubmitted && feedback && !isWrittenQuestion && (
+          {isSubmitted && feedback && !isWrittenQuestion && ( 
             <p className={`mt-4 sm:mt-6 text-lg font-semibold text-center ${feedback === 'Correct' ? 'text-green-600' : 'text-red-600'}`}>
               {feedback}!
             </p>
@@ -73,6 +84,7 @@ const UserView: React.FC<UserViewProps> = ({
               <button
                 onClick={onSubmitAnswer}
                 className="px-6 py-2.5 font-semibold rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 text-sm sm:text-base bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500"
+                // disabled={isTimeUp} // REMOVED
               >
                 Submit Answer
               </button>

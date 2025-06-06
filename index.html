@@ -38,6 +38,20 @@
       border-radius: 0.375rem; /* rounded-md for consistency */
       z-index: 0;
     }
+
+    @keyframes more-bounce {
+      0%, 100% {
+        transform: translateY(-60%); /* Increased bounce height */
+        animation-timing-function: cubic-bezier(0.8,0,1,1);
+      }
+      50% {
+        transform: translateY(0);
+        animation-timing-function: cubic-bezier(0,0,0.2,1);
+      }
+    }
+    .animate-more-bounce {
+      animation: more-bounce 1s infinite;
+    }
   </style>
 <script type="importmap">
 {

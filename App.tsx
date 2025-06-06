@@ -33,6 +33,7 @@ interface Quiz {
   name: string;
   questions: Question[];
   isStartable: boolean;
+  // timeLimitMinutes?: number; // Removed for quiz timer feature
 }
 
 interface Subject {
@@ -65,10 +66,10 @@ async function getFetchableGitHubContentUrl(configUrl: string): Promise<string |
   }
 
   try {
-    new URL(configUrl); 
-    if (/^https:\/\/raw\.githubusercontent\.com\//.test(configUrl) || 
+    new URL(configUrl);
+    if (/^https:\/\/raw\.githubusercontent\.com\//.test(configUrl) ||
         /^https:\/\/api\.github\.com\/repos\/[^\/]+\/[^\/]+\/contents\//.test(configUrl) ||
-        !/^https:\/\/github\.com\//.test(configUrl) 
+        !/^https:\/\/github\.com\//.test(configUrl)
        ) {
       return configUrl;
     } else {
@@ -85,7 +86,7 @@ async function getFetchableGitHubContentUrl(configUrl: string): Promise<string |
 const App: React.FC = () => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => localStorage.getItem('isAdminAuthenticated') === 'true');
   const [isAdminView, setIsAdminView] = useState(() => isAdminAuthenticated && localStorage.getItem('wasAdminViewBeforeRefresh') === 'true');
-  
+
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [activeSubjectIdForAdmin, setActiveSubjectIdForAdminState] = useState<string | null>(null);
   const [activeQuizIdForAdmin, setActiveQuizIdForAdminState] = useState<string | null>(null);
@@ -94,46 +95,43 @@ const App: React.FC = () => {
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  
+
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [dataLoadMessage, setDataLoadMessage] = useState<string | null>("Initializing...");
-  
+  const [dataLoadMessage, setDataLoadMessage] = useState<string | null>("Gathering all the necessary app information, please hold on a moment..."); 
+
   const [userCurrentQuestionIndex, setUserCurrentQuestionIndex] = useState(0);
   const [userSelectedOptionId, setUserSelectedOptionId] = useState<string | null>(null);
-  const [userFeedback, setUserFeedback] = useState<string | null>(null); 
+  const [userFeedback, setUserFeedback] = useState<string | null>(null);
   const [userIsSubmitted, setUserIsSubmitted] = useState(false);
   const [userQuizComplete, setUserQuizComplete] = useState(false);
 
   const [showManageSubjectsSection, setShowManageSubjectsSection] = useState(true);
   const [showManageQuizzesSection, setShowManageQuizzesSection] = useState(true);
 
+  // Quiz Timer State - REMOVED
+  // const [activeQuizTimeLimitSeconds, setActiveQuizTimeLimitSeconds] = useState<number>(0);
+  // const [isTimeUp, setIsTimeUp] = useState<boolean>(false);
+
+
   const loadLocalDataFallback = useCallback(async (contextMessage?: string) => {
-    let messagePrefix = "Loading local fallback data (./data.json).";
-    if (contextMessage) {
-        messagePrefix = `${contextMessage} ${messagePrefix}`;
-    }
-    setDataLoadMessage(messagePrefix);
     console.warn(contextMessage || "Falling back to local data.json.");
     try {
-      const localDataPath = './data.json'; 
+      const localDataPath = './data.json';
       const cacheBustedLocalDataPath = `${localDataPath}?_cb_local=${Date.now().toString()}`;
-      
+
       const response = await fetch(cacheBustedLocalDataPath, { cache: 'no-cache' });
       if (!response.ok) {
         if (response.status === 404) {
           console.warn("Local data.json not found, initializing with empty subjects array.");
           setSubjects([]);
-          setDataLoadMessage(`${messagePrefix} Local data.json not found. Initializing with empty quiz data.`);
         } else {
           const errorText = await response.text();
           console.error(`Failed to fetch local data.json: ${response.status} ${response.statusText}. Response: ${errorText}`);
           setSubjects([]);
-          setDataLoadMessage(`${messagePrefix} Error fetching local data.json (${response.status}). Initializing with empty quiz data.`);
         }
       } else {
         const data = await response.json();
         setSubjects(Array.isArray(data) ? data as Subject[] : []);
-        setDataLoadMessage(`${messagePrefix} Successfully loaded.`);
         console.log("Successfully loaded local data.json");
       }
     } catch (error) {
@@ -143,20 +141,18 @@ const App: React.FC = () => {
         console.error("Error loading or parsing local data.json (non-Error object):", error);
       }
       setSubjects([]);
-      setDataLoadMessage(`${messagePrefix} Error loading local data. See console for details. Initializing with empty quiz data.`);
     }
   }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoadingData(true);
-      setDataLoadMessage("Attempting to load data from configuration...");
       const baseUrl = await getFetchableGitHubContentUrl(AppConfig.GITHUB_DATA_URL);
 
       if (baseUrl) {
-        setDataLoadMessage(`Fetching data from: ${baseUrl}`);
+        console.info(`Attempting to fetch data from: ${baseUrl}`);
         try {
-          const url = new URL(baseUrl); 
+          const url = new URL(baseUrl);
           url.searchParams.append('_cb_data', Date.now().toString());
           const finalUrlToFetch = url.toString();
           console.log("Fetching final data from:", finalUrlToFetch);
@@ -168,13 +164,24 @@ const App: React.FC = () => {
             fetchOptions.headers = { 'Accept': 'application/vnd.github.v3.raw' };
             useTextParsing = true;
             console.log("Using GitHub API raw content fetch method.");
+            
+            const pat = localStorage.getItem('githubPat');
+            if (pat) {
+                fetchOptions.headers = {
+                    ...fetchOptions.headers,
+                    'Authorization': `token ${pat}`
+                };
+                console.log("Using stored GitHub PAT for authenticated data fetch.");
+            } else {
+                console.warn("No GitHub PAT found in localStorage. Proceeding with unauthenticated data fetch (may be rate-limited).");
+            }
           } else {
             console.log("Using standard fetch method for non-API or raw.githubusercontent.com URL.");
           }
-          
+
           const response = await fetch(finalUrlToFetch, fetchOptions);
           if (!response.ok) {
-            const errorBody = await response.text(); 
+            const errorBody = await response.text();
             throw new Error(`Failed to fetch from ${finalUrlToFetch}: ${response.status} ${response.statusText}. Body: ${errorBody}`);
           }
 
@@ -185,9 +192,8 @@ const App: React.FC = () => {
           } else {
             data = await response.json();
           }
-          
+
           setSubjects(Array.isArray(data) ? data as Subject[] : []);
-          setDataLoadMessage("Data loaded successfully from remote source.");
           console.log("Successfully loaded data from remote source");
 
         } catch (error) {
@@ -203,7 +209,7 @@ const App: React.FC = () => {
       } else {
         console.info("No remote GITHUB_DATA_URL configured, URL is invalid/placeholder, or processing error prevented getting a usable URL.");
         await loadLocalDataFallback("No remote data URL usable or remote fetch failed.");
-        setIsLoadingData(false); 
+        setIsLoadingData(false);
       }
     };
     fetchData();
@@ -216,6 +222,8 @@ const App: React.FC = () => {
     setUserFeedback(null);
     setUserIsSubmitted(false);
     setUserQuizComplete(false);
+    // setActiveQuizTimeLimitSeconds(0); // REMOVED
+    // setIsTimeUp(false); // REMOVED
   };
 
   const handleSwitchView = () => {
@@ -242,7 +250,7 @@ const App: React.FC = () => {
     if (password === ADMIN_PASSWORD) {
       setIsAdminAuthenticated(true);
       localStorage.setItem('isAdminAuthenticated', 'true');
-      setIsAdminView(true); // Switch to admin view on successful login
+      setIsAdminView(true); 
       localStorage.setItem('wasAdminViewBeforeRefresh', 'true');
       setShowAdminLoginModal(false);
       setLoginError(null);
@@ -251,10 +259,10 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAdminLogout = () => { 
+  const handleAdminLogout = () => {
     setIsAdminAuthenticated(false);
     localStorage.removeItem('isAdminAuthenticated');
-    setIsAdminView(false); 
+    setIsAdminView(false);
     localStorage.removeItem('wasAdminViewBeforeRefresh');
     setActiveSubjectIdForAdminState(null);
     setActiveQuizIdForAdminState(null);
@@ -264,21 +272,21 @@ const App: React.FC = () => {
   const handleCloseAdminLoginModal = () => {
     setShowAdminLoginModal(false);
     setLoginError(null);
-    if (!isAdminAuthenticated) { 
-      setIsAdminView(false); // If modal closed without login, switch back from potential admin view attempt
+    if (!isAdminAuthenticated) {
+      setIsAdminView(false); 
       localStorage.removeItem('wasAdminViewBeforeRefresh');
     }
   };
 
   const setActiveSubjectIdForAdmin = (id: string | null) => {
     setActiveSubjectIdForAdminState(id);
-    setActiveQuizIdForAdminState(null); 
-    setEditingQuestion(null); 
+    setActiveQuizIdForAdminState(null);
+    setEditingQuestion(null);
   };
 
   const setActiveQuizIdForAdmin = (id: string | null) => {
     setActiveQuizIdForAdminState(id);
-    setEditingQuestion(null); 
+    setEditingQuestion(null);
   };
 
   const handleCreateSubject = (name: string) => {
@@ -301,9 +309,9 @@ const App: React.FC = () => {
       setActiveSubjectIdForAdmin(null);
     }
   };
-  
+
   const handleCreateQuiz = (subjectId: string, name: string) => {
-    const newQuiz: Quiz = { id: generateId(), name, questions: [], isStartable: false };
+    const newQuiz: Quiz = { id: generateId(), name, questions: [], isStartable: false }; // Removed timeLimitMinutes
     setSubjects(prev => prev.map(s => {
       if (s.id === subjectId) {
         if (s.quizzes.some(q => q.name.toLowerCase() === name.toLowerCase())) {
@@ -339,6 +347,8 @@ const App: React.FC = () => {
     return true;
   };
 
+  // handleUpdateQuizTimeLimit REMOVED
+
   const handleDeleteQuiz = (subjectId: string, quizId: string) => {
     setSubjects(prev => prev.map(s => s.id === subjectId ? { ...s, quizzes: s.quizzes.filter(q => q.id !== quizId) } : s));
     if (activeQuizIdForAdmin === quizId) {
@@ -361,7 +371,7 @@ const App: React.FC = () => {
     const newQuestion: Question = { ...questionData, id: generateId() };
     if(newQuestion.type === 'mcq' && newQuestion.options) {
         newQuestion.options = newQuestion.options.map((opt, index) => ({...opt, id: `option-${generateId()}-${index}`}));
-        
+
         const correctOptTextFromPayload = questionData.options?.find(o => o.id === questionData.correctOptionId)?.text;
         const newCorrectOpt = newQuestion.options.find(o => o.text === correctOptTextFromPayload);
         newQuestion.correctOptionId = newCorrectOpt ? newCorrectOpt.id : undefined;
@@ -384,16 +394,16 @@ const App: React.FC = () => {
     } : s));
     setEditingQuestion(null);
   };
-  
+
   const handleUpdateQuestion = (subjectId: string, quizId: string, updatedQuestion: Question) => {
      if(updatedQuestion.type === 'mcq' && updatedQuestion.options) {
         updatedQuestion.options = updatedQuestion.options.map((opt, index) => ({
-            id: opt.id && opt.id.startsWith('option-') ? opt.id : `option-${generateId()}-${index}`, 
+            id: opt.id && opt.id.startsWith('option-') ? opt.id : `option-${generateId()}-${index}`,
             text: opt.text
         }));
 
         if (typeof updatedQuestion.correctOptionId === 'string' && !updatedQuestion.options.find(o => o.id === updatedQuestion.correctOptionId)) {
-            const correctOptTextFromPayload = (editingQuestion?.options?.find(o => o.id === updatedQuestion.correctOptionId))?.text; 
+            const correctOptTextFromPayload = (editingQuestion?.options?.find(o => o.id === updatedQuestion.correctOptionId))?.text;
             const newCorrectOpt = updatedQuestion.options.find(o => o.text === correctOptTextFromPayload);
 
             if (newCorrectOpt) {
@@ -406,7 +416,7 @@ const App: React.FC = () => {
                          updatedQuestion.correctOptionId = updatedQuestion.options[originalIndex].id;
                      } else {
                         console.warn("Correct option index out of bounds after update.");
-                        updatedQuestion.correctOptionId = undefined; 
+                        updatedQuestion.correctOptionId = undefined;
                      }
                  } else {
                     console.warn("Correct option ID seems invalid after update and couldn't be re-mapped.");
@@ -414,7 +424,7 @@ const App: React.FC = () => {
                  }
             }
         }
-        
+
         const currentCorrectOption = updatedQuestion.options.find(opt => opt.id === updatedQuestion.correctOptionId);
         if(!currentCorrectOption && updatedQuestion.options.length > 0) {
             console.warn("Updated question has MCQ type and options, but correctOptionId seems invalid or mismatched even after re-mapping attempts.");
@@ -455,7 +465,7 @@ const App: React.FC = () => {
                         const sortedQuestions = [...quiz.questions].sort((a, b) => {
                             if (a.type === 'written' && b.type === 'mcq') return -1;
                             if (a.type === 'mcq' && b.type === 'written') return 1;
-                            return 0; 
+                            return 0;
                         });
                         return { ...quiz, questions: sortedQuestions };
                     }
@@ -477,12 +487,13 @@ const App: React.FC = () => {
   const handleSelectQuizForUser = (quizId: string) => {
     const quiz = selectedSubjectForUser?.quizzes.find(q => q.id === quizId);
     setSelectedQuizForUser(quiz || null);
-    resetUserQuizState();
+    resetUserQuizState(); 
+    // Removed timer initialization
   };
 
   const handleBackToSubjectListFromQuizList = () => {
     setSelectedSubjectForUser(null);
-    setSelectedQuizForUser(null); 
+    setSelectedQuizForUser(null);
     resetUserQuizState();
   };
 
@@ -490,89 +501,75 @@ const App: React.FC = () => {
     setSelectedQuizForUser(null);
     resetUserQuizState();
   };
-  
+
   const handleUserOptionSelect = (optionId: string) => {
-    if (!userIsSubmitted) {
-      setUserSelectedOptionId(optionId);
-    }
+    setUserSelectedOptionId(optionId);
+    setUserFeedback(null); 
   };
 
   const handleUserSubmitAnswer = () => {
-    if (!selectedQuizForUser || !userSelectedOptionId) return;
-    const currentQuestion = selectedQuizForUser.questions[userCurrentQuestionIndex];
-    if (!currentQuestion || currentQuestion.type === 'written') return;
-
-    if (currentQuestion.correctOptionId === userSelectedOptionId) {
-      setUserFeedback('Correct');
-    } else {
-      setUserFeedback('Incorrect');
+    if (selectedQuizForUser && selectedQuizForUser.questions[userCurrentQuestionIndex] && userSelectedOptionId) {
+      const currentQuestion = selectedQuizForUser.questions[userCurrentQuestionIndex];
+      if (currentQuestion.type === 'mcq') {
+        if (userSelectedOptionId === currentQuestion.correctOptionId) {
+          setUserFeedback('Correct');
+        } else {
+          setUserFeedback('Incorrect');
+        }
+      }
+      setUserIsSubmitted(true);
     }
-    setUserIsSubmitted(true);
   };
 
   const handleUserNextQuestion = () => {
-    if (!selectedQuizForUser) return;
-    if (userCurrentQuestionIndex < selectedQuizForUser.questions.length - 1) {
+    setUserIsSubmitted(false);
+    setUserSelectedOptionId(null);
+    setUserFeedback(null);
+    if (selectedQuizForUser && userCurrentQuestionIndex < selectedQuizForUser.questions.length - 1) {
       setUserCurrentQuestionIndex(prevIndex => prevIndex + 1);
-      setUserSelectedOptionId(null);
-      setUserFeedback(null);
-      setUserIsSubmitted(false);
     } else {
       setUserQuizComplete(true);
-      setUserFeedback(null); 
     }
   };
+  
+  // handleTimeUp REMOVED
 
-  // Determine context title for header
-  let contextTitle = APP_NAME;
   const activeAdminSubject = subjects.find(s => s.id === activeSubjectIdForAdmin);
   const activeAdminQuiz = activeAdminSubject?.quizzes.find(q => q.id === activeQuizIdForAdmin);
-
-  if (isAdminView) {
-    if (isAdminAuthenticated) {
-      contextTitle = "Admin Panel";
-      if (activeAdminSubject) {
-        contextTitle += ` > ${activeAdminSubject.name}`;
-        if (activeAdminQuiz) {
-          contextTitle += ` > ${activeAdminQuiz.name}`;
-          if (editingQuestion) {
-            contextTitle += ' > Edit Question';
-          } else if (activeAdminQuiz.questions.length > 0 || activeQuizIdForAdmin) {
-            contextTitle += ' > Manage Questions';
-          }
-        } else if (activeAdminSubject.quizzes.length > 0 || activeSubjectIdForAdmin) {
-          contextTitle += ' > Manage Quizzes';
-        }
-      } else {
-         contextTitle += ' > Manage Subjects';
-      }
-    } else {
-      contextTitle = "Admin Login Required";
-    }
-  } else {
-    if (selectedQuizForUser && selectedSubjectForUser) {
-      contextTitle = `${selectedSubjectForUser.name} > ${selectedQuizForUser.name}`;
-    } else if (selectedSubjectForUser) {
-      contextTitle = `${selectedSubjectForUser.name} > Select Quiz`;
-    } else {
-      contextTitle = "Select Subject";
-    }
-  }
   
-  const renderContent = () => {
-    if (isLoadingData) {
-      return (
-        <div className="flex-grow flex flex-col items-center justify-center text-center p-4">
-          <div className="text-2xl font-semibold text-blue-600 mb-2">
-            <i className="fas fa-spinner fa-spin mr-2"></i>Loading Application Data...
-          </div>
-          <p className="text-slate-500">{dataLoadMessage || "Please wait."}</p>
+  const contextTitle = isAdminView
+    ? (activeAdminQuiz ? `Admin: ${activeAdminSubject?.name} > ${activeAdminQuiz.name}` : (activeAdminSubject ? `Admin: ${activeAdminSubject.name}` : "Admin: Subject Management"))
+    : (selectedQuizForUser ? `${selectedSubjectForUser?.name || ''}: ${selectedQuizForUser.name}` : (selectedSubjectForUser ? `${selectedSubjectForUser.name}: Select Quiz` : "Select Subject"));
+
+  if (isLoadingData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100 p-4 text-center">
+        <h1 className="text-3xl font-bold text-blue-600 mb-4">
+          Loading Application Data
+        </h1>
+        <div className="flex space-x-2">
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-more-bounce [animation-delay:-0.3s]"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-more-bounce [animation-delay:-0.15s]"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-more-bounce"></div>
         </div>
-      );
-    }
-    if (isAdminView) {
-      if (isAdminAuthenticated) {
-        return (
+        {dataLoadMessage && (
+          <p className="text-slate-500 text-sm mt-3">{dataLoadMessage}</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Header 
+        contextTitle={contextTitle} 
+        isAdminView={isAdminView}
+        isAdminAuthenticated={isAdminAuthenticated}
+        onSwitchView={handleSwitchView}
+        onAdminLogout={handleAdminLogout}
+      />
+      <main className="flex-grow p-4 sm:p-6 lg:p-8 max-w-5xl w-full mx-auto">
+        {isAdminView && isAdminAuthenticated ? (
           <AdminView
             subjects={subjects}
             activeSubjectId={activeSubjectIdForAdmin}
@@ -588,6 +585,7 @@ const App: React.FC = () => {
             onUpdateQuizName={handleUpdateQuizName}
             onDeleteQuiz={handleDeleteQuiz}
             onToggleQuizStartable={handleToggleQuizStartable}
+            // onUpdateQuizTimeLimit={handleUpdateQuizTimeLimit} // REMOVED
             onAddQuestion={handleAddQuestion}
             onUpdateQuestion={handleUpdateQuestion}
             onDeleteQuestion={handleDeleteQuestion}
@@ -600,19 +598,7 @@ const App: React.FC = () => {
             activeAdminSubject={activeAdminSubject}
             activeAdminQuiz={activeAdminQuiz}
           />
-        );
-      } else {
-        // Admin view selected but not authenticated (modal should be shown)
-        // This path is typically covered by the modal, but a fallback message can be here
-        // Or if app loads into admin view but no longer authenticated.
-        if (showAdminLoginModal) {
-            return <p className="text-center p-4">Redirecting to Admin Login...</p>;
-        }
-        return <p className="text-center p-4">Admin authentication required. Please switch to User View or attempt login via Admin Panel button.</p>;
-      }
-    } else { // User View
-      if (selectedQuizForUser && selectedSubjectForUser) {
-        return (
+        ) : !isAdminView && selectedSubjectForUser && selectedQuizForUser ? (
           <UserView
             quiz={selectedQuizForUser}
             currentQuestionIndex={userCurrentQuestionIndex}
@@ -624,42 +610,28 @@ const App: React.FC = () => {
             onSubmitAnswer={handleUserSubmitAnswer}
             onNextQuestion={handleUserNextQuestion}
             onBackToQuizList={handleBackToQuizListFromUserView}
+            // initialTimeSeconds={activeQuizTimeLimitSeconds} // REMOVED
+            // onTimeUp={handleTimeUp} // REMOVED
+            // isTimeUp={isTimeUp} // REMOVED
           />
-        );
-      } else if (selectedSubjectForUser) {
-        return (
+        ) : !isAdminView && selectedSubjectForUser ? (
           <QuizSelectionView
             subject={selectedSubjectForUser}
             onSelectQuiz={handleSelectQuizForUser}
             onBackToSubjectList={handleBackToSubjectListFromQuizList}
           />
-        );
-      } else {
-        return <SubjectSelectionView subjects={subjects} onSelectSubject={handleSelectSubjectForUser} />;
-      }
-    }
-  };
-
-  return (
-    <>
-      <Header
-        contextTitle={contextTitle}
-        isAdminView={isAdminView}
-        isAdminAuthenticated={isAdminAuthenticated}
-        onSwitchView={handleSwitchView}
-        onAdminLogout={handleAdminLogout}
-      />
-      <main className="flex-grow p-4 sm:p-6 md:p-8 max-w-5xl w-full mx-auto">
-        {renderContent()}
+        ) : (
+          <SubjectSelectionView subjects={subjects} onSelectSubject={handleSelectSubjectForUser} />
+        )}
       </main>
-      {showAdminLoginModal && !isAdminAuthenticated && (
+      <Footer appName={APP_NAME} />
+      {showAdminLoginModal && (
         <AdminLoginModal
           onLogin={handleAdminLogin}
           onClose={handleCloseAdminLoginModal}
           error={loginError}
         />
       )}
-      <Footer appName={APP_NAME} />
     </>
   );
 };

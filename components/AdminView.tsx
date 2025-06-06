@@ -88,6 +88,7 @@ interface AdminViewProps {
   onUpdateQuizName: (subjectId: string, quizId: string, newName: string) => boolean;
   onDeleteQuiz: (subjectId: string, quizId: string) => void;
   onToggleQuizStartable: (subjectId: string, quizId: string) => void;
+  // onUpdateQuizTimeLimit: (subjectId: string, quizId: string, timeLimitMinutes: number) => void; // REMOVED
   onAddQuestion: (subjectId: string, quizId: string, question: Omit<Question, 'id'>) => void;
   onUpdateQuestion: (subjectId: string, quizId: string, question: Question) => void;
   onDeleteQuestion: (subjectId: string, quizId: string, questionId: string) => void;
@@ -106,6 +107,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
     subjects, activeSubjectId, activeQuizId, editingQuestion, setEditingQuestion,
     onSetActiveSubjectId, onCreateSubject, onUpdateSubjectName, onDeleteSubject,
     onSetActiveQuizId, onCreateQuiz, onUpdateQuizName, onDeleteQuiz, onToggleQuizStartable,
+    // onUpdateQuizTimeLimit, // REMOVED
     onAddQuestion, onUpdateQuestion, onDeleteQuestion, onReorderQuestions,
     maxOptions,
     showManageSubjectsSection, setShowManageSubjectsSection,
@@ -136,7 +138,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
     if (userPat) {
       localStorage.setItem('githubPat', userPat);
     } else {
-      localStorage.removeItem('githubPat'); // Remove if PAT is cleared
+      localStorage.removeItem('githubPat'); 
     }
   }, [userPat]);
 
@@ -177,11 +179,11 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
 
     let lastError: any = null;
 
-    for (let attempt = 0; attempt < 2; attempt++) { // 0 = first try, 1 = retry
+    for (let attempt = 0; attempt < 2; attempt++) { 
       try {
         if (attempt > 0) {
           setSaveStatus({ message: `Conflict detected. Retrying save (Attempt ${attempt + 1}/2)...`, type: 'info' });
-          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); // Wait with jitter
+          await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 500)); 
         } else {
             setSaveStatus({ message: 'Processing save request...', type: 'info' });
         }
@@ -212,7 +214,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
         const contentBase64 = btoa(unescape(encodeURIComponent(jsonData))); 
 
         const payload: { message: string; content: string; branch: string; sha?: string; } = {
-          message: 'Quiz App: Update data.json via Web Editor', // Commit message (internal)
+          message: 'Quiz App: Update data.json via Web Editor', 
           content: contentBase64,
           branch: repoInfo.branch,
         };
@@ -409,7 +411,8 @@ Please correct the PAT and try saving again.`;
                           <button onClick={handleUpdateQuizName} className={buttonWarningClass}>Update Name</button>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between py-2">
+                      {/* Time Limit Input REMOVED */}
+                      <div className="flex items-center justify-between py-2 mt-3">
                         <label htmlFor="quizStartableToggle" className="text-sm font-medium text-slate-700">Available to Users:</label>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" id="quizStartableToggle" className="sr-only peer" checked={activeAdminQuiz.isStartable} onChange={() => onToggleQuizStartable(activeAdminSubject.id, activeAdminQuiz.id)} />
@@ -546,7 +549,7 @@ Please correct the PAT and try saving again.`;
                                 <div className={`mt-3 p-3 rounded-md text-sm ${
                                     saveStatus.type === 'error' ? 'bg-red-100 text-red-700 border border-red-300' :
                                     saveStatus.type === 'success' ? 'bg-green-100 text-green-700 border border-green-300' :
-                                    'bg-blue-100 text-blue-700 border border-blue-300' // for 'info'
+                                    'bg-blue-100 text-blue-700 border border-blue-300' 
                                 }`} role="alert"
                                 >
                                      <p style={{ whiteSpace: 'pre-line' }}>{saveStatus.message}</p>
