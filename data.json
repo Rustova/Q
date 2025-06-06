@@ -1,23 +1,5 @@
 [
   {
-    "id": "1749175288175wdhzbbp",
-    "name": "noha taha",
-    "quizzes": [
-      {
-        "id": "1749175294093bw0hjdd",
-        "name": "Lecture 1",
-        "questions": [
-          {
-            "questionText": "your old?",
-            "type": "written",
-            "id": "1749175301955en8i72k"
-          }
-        ],
-        "isStartable": false
-      }
-    ]
-  },
-  {
     "id": "1749180857149a666e6i",
     "name": "باطنة",
     "quizzes": [
