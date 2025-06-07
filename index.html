@@ -1,81 +1,216 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Q</title>
+  <title>Q</title>                                                                                              
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://kit.fontawesome.com/e2c841f407.js" crossorigin="anonymous"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      margin: 0;
-      background-color: #f1f5f9; /* Ensure body matches app-root bg */
-      color: #1e293b; /* text-slate-800 */
-      user-select: none; /* select-none globally */
-      -webkit-user-select: none; /* Safari */
-      -moz-user-select: none; /* Firefox */
-      -ms-user-select: none; /* IE 10+ */
-      -webkit-font-smoothing: antialiased; /* antialiased */
-      -moz-osx-font-smoothing: grayscale;
+    :root {
+      /* New Palette: Page background is #1E333A, Cards/Modals are #161616 */
+      --bg-primary: #1E333A; /* Main page background */
+      --bg-secondary: #161616; /* For cards, modals, sections */
+      --bg-header: #1E333A; /* Header background, matches new page bg */
+      
+      --text-primary: #D3C3B9; /* Light Beige */
+      --text-secondary: #A79E9C; /* Muted Grayish Lilac */
+      
+      --border-color: #3D4D55; /* Dark Slate Blue/Gray */
+      
+      --accent-primary: #B58863; /* Tan */
+      --accent-primary-hover: #A0704E; /* Darker Tan for hover */
+      --accent-primary-bg-selection: rgba(181, 136, 99, 0.7); /* Tan at 70% opacity for selected options */
+      --accent-secondary: #3D4D55; /* Dark Slate Blue/Gray */
+      --accent-secondary-hover: #4C5F6B; /* Slightly Lighter/Darker Slate Blue/Gray for hover */
+
+      /* Semantic colors (kept from previous for consistency of meaning) */
+      --accent-red: #E53E3E; 
+      --accent-red-hover: #C53030;
+      --accent-green: #48BB78;
+      --accent-green-hover: #38A169;
+      --accent-amber: #D97706; /* Darkened Amber */
+      --accent-amber-hover: #B45309; /* Further Darkened Amber for hover */
+
+      /* Soft backgrounds for feedback */
+      --accent-green-bg-soft: rgba(72, 187, 120, 0.15); /* Soft background for correct options */
+      --accent-red-bg-soft: rgba(229, 62, 62, 0.15);   /* Soft background for incorrect options */
+
+      /* Inputs */
+      --input-bg: #1E333A; 
+      --input-text: #D3C3B9; 
+      --input-border: #3D4D55; 
+      --input-focus-ring: #B58863; 
+      --placeholder-color: #A79E9C; 
+
+      /* Scrollbar */
+      --scrollbar-track-bg: #1E333A; 
+      --scrollbar-thumb-bg: #3D4D55; 
+      --scrollbar-thumb-hover-bg: #B58863; 
+
+      /* Button Primary (Tan button on dark bg) */
+      --btn-primary-bg: #B58863; /* Tan */
+      --btn-primary-text: #161616; /* Dark text for contrast on Tan */
+      --btn-primary-hover-bg: #A0704E; /* Darker Tan */
+      --btn-primary-focus-ring: #D3C3B9; /* Light Beige */
+
+      /* Button Secondary (Dark Slate Blue/Gray button) */
+      --btn-secondary-bg: #3D4D55; /* Dark Slate Blue/Gray */
+      --btn-secondary-text: #D3C3B9; /* Light Beige text */
+      --btn-secondary-hover-bg: #4C5F6B; /* Slightly different shade for hover */
+      --btn-secondary-focus-ring: #A79E9C; /* Muted Grayish Lilac */
+
+      /* Button Amber (Yellow button) */
+      --btn-amber-text: #161616; /* Dark text for contrast on Amber, same as primary */
     }
-    #app-root {
+
+    /* Ensure dark class applies variables if any specificity issues arise elsewhere */
+    html.dark {
+      --bg-primary: #1E333A;
+      --bg-secondary: #161616;
+      --bg-header: #1E333A;
+      --text-primary: #D3C3B9;
+      --text-secondary: #A79E9C;
+      --border-color: #3D4D55;
+      --accent-primary: #B58863;
+      --accent-primary-hover: #A0704E;
+      --accent-primary-bg-selection: rgba(181, 136, 99, 0.7);
+      --accent-secondary: #3D4D55;
+      --accent-secondary-hover: #4C5F6B;
+      --accent-amber: #D97706; /* Darkened Amber */
+      --accent-amber-hover: #B45309; /* Further Darkened Amber for hover */
+      --accent-green-bg-soft: rgba(72, 187, 120, 0.15);
+      --accent-red-bg-soft: rgba(229, 62, 62, 0.15);
+      --input-bg: #1E333A; 
+      --input-text: #D3C3B9;
+      --input-border: #3D4D55;
+      --input-focus-ring: #B58863;
+      --placeholder-color: #A79E9C;
+      --scrollbar-track-bg: #1E333A;
+      --scrollbar-thumb-bg: #3D4D55;
+      --scrollbar-thumb-hover-bg: #B58863;
+      --btn-primary-bg: #B58863;
+      --btn-primary-text: #161616;
+      --btn-primary-hover-bg: #A0704E;
+      --btn-primary-focus-ring: #D3C3B9;
+      --btn-secondary-bg: #3D4D55;
+      --btn-secondary-text: #D3C3B9;
+      --btn-secondary-hover-bg: #4C5F6B;
+      --btn-secondary-focus-ring: #A79E9C;
+      --btn-amber-text: #161616;
+    }
+
+    body {
+      font-family: 'Open Sans', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      margin: 0;
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      /* background-color and color inherited from body */
+      user-select: none; /* Standard */
+      -webkit-user-select: none; /* Safari */
+      -moz-user-select: none; /* Firefox */
+      -ms-user-select: none; /* IE10+ */
     }
+    #app-root {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Custom Scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: var(--scrollbar-track-bg);
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: var(--scrollbar-thumb-bg);
+      border-radius: 10px;
+      border: 2px solid var(--scrollbar-track-bg); /* Creates padding around thumb */
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background-color: var(--scrollbar-thumb-hover-bg);
+    }
+    .custom-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb-bg) var(--scrollbar-track-bg);
+    }
+
+    /* Hold to delete button progress */
     .button-hold-progress {
       position: absolute;
       left: 0;
       top: 0;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.2);
-      transition: width 0.1s linear;
-      border-radius: 0.375rem; /* rounded-md for consistency */
-      z-index: 0;
+      background-color: rgba(211, 195, 185, 0.2); /* --text-primary with alpha */
+      transition: width 0.1s linear; /* Smooth progress update */
+      border-radius: inherit; /* Ensures progress bar also has rounded corners if button does */
     }
 
-    @keyframes more-bounce {
-      0%, 100% {
-        transform: translateY(-60%); /* Increased bounce height */
-        animation-timing-function: cubic-bezier(0.8,0,1,1);
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
       }
-      50% {
+      to {
+        opacity: 1;
         transform: translateY(0);
-        animation-timing-function: cubic-bezier(0,0,0.2,1);
       }
     }
-    .animate-more-bounce {
-      animation: more-bounce 1s infinite;
+    .animate-fadeInUp {
+      animation-name: fadeInUp;
+      animation-duration: 0.5s;
+      animation-fill-mode: backwards; /* Apply styles before animation starts */
+      animation-timing-function: ease-out;
+    }
+    
+    .animate-heartbeat {
+      display: inline-block; /* Required for transform to work */
+      animation: heartbeat 1.5s ease-in-out infinite;
+    }
+
+    @keyframes heartbeat {
+      0%, 100% {
+        transform: scale(1);
+      }
+      10%, 30% {
+        transform: scale(0.9);
+      }
+      20%, 40%, 60%, 80% {
+        transform: scale(1.1);
+      }
+      50%, 70% {
+        transform: scale(1.1);
+      }
     }
   </style>
-
 <link rel="stylesheet" href="/index.css">
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.1.0",
-    "react-dom/client": "https://esm.sh/react-dom@^19.1.0/client",
-    "react/jsx-runtime": "https://esm.sh/react@^19.1.0/jsx-runtime",
-    "react/": "https://esm.sh/react@^19.1.0/",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
-    "react-dom": "https://esm.sh/react-dom@^19.1.0"
-  }
-}
-</script>
-  <script type="module" crossorigin src="/Q/assets/index-BaFMBhxK.js"></script>
+     <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@^19.1.0",
+          "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+          "react/": "https://esm.sh/react@^19.1.0/",
+          "react-dom": "https://esm.sh/react-dom@^19.1.0",
+          "@hello-pangea/dnd": "https://esm.sh/@hello-pangea/dnd@^18.0.1",
+          "jspdf": "https://esm.sh/jspdf@2.5.1"
+        }
+      }
+    </script>
+  <script type="module" crossorigin src="/Q/assets/index-BPc4XOiF.js"></script>
 </head>
-<body>
-  <div id="app-root"></div>
-  <div id="modal-root"></div>
-
-  <script>
-    document.addEventListener('contextmenu', event => event.preventDefault());
-  </script>
-  <!-- Google API scripts removed -->
+<body class="custom-scrollbar" oncontextmenu="return false;">
+  <div id="app-root">
+    <!-- React app will be rendered here -->
+  </div>
+  <div id="modal-root"></div> <!-- Portal for modals -->
 </body>
 </html>
