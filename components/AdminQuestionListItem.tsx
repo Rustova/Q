@@ -1,6 +1,8 @@
+
+
+
 import React from 'react';
 import type { Question } from '../App.tsx';
-// import HoldToDeleteButton from './HoldToDeleteButton.tsx'; // No longer needed for this specific component
 
 interface AdminQuestionListItemProps {
   question: Question;
@@ -23,29 +25,36 @@ const AdminQuestionListItem: React.FC<AdminQuestionListItemProps> = ({
     detailsText = `${question.options?.length || 0} options, Correct: ${correctOptionText.substring(0,25)}${correctOptionText.length > 25 ? '...' : ''}`;
   }
 
+  const itemStyle: React.CSSProperties = {
+    userSelect: 'none', 
+    transition: 'background-color 0.2s ease, border-color 0.2s ease', // Added border-color transition
+  };
 
   return (
-    <li className="flex items-center justify-between p-3 bg-white rounded-md border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-700 truncate" title={question.questionText}>
+    <li
+      className={`flex items-center justify-between p-3 bg-[var(--bg-primary)] rounded-md border border-[var(--border-color)] hover:bg-[var(--accent-secondary)] hover:bg-opacity-20 hover:border-[var(--accent-secondary)] shadow-sm`}
+      style={itemStyle}
+    >
+      <div className="flex-1 min-w-0 mr-2">
+        <p className="text-sm text-[var(--text-primary)] truncate" title={question.questionText}>
           <span className="font-semibold">{questionNumber}.</span> {question.questionText} 
-          <span className="text-xs text-blue-500 ml-1">({question.type === 'written' ? 'Written' : 'MCQ'})</span>
+          <span className="text-xs text-[var(--text-secondary)] ml-1">({question.type === 'written' ? 'Written' : 'MCQ'})</span>
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-[var(--text-secondary)]">
           {detailsText}
         </p>
       </div>
       <div className="flex space-x-2 ml-2 shrink-0">
         <button
           onClick={onEdit}
-          className="edit-question-button px-3 py-1 text-xs bg-amber-500 hover:bg-amber-600 text-white rounded-md transition-colors"
+          className="edit-question-button px-3 py-1 text-xs bg-[var(--accent-amber)] hover:bg-[var(--accent-amber-hover)] text-[var(--btn-amber-text)] rounded-md transition-colors"
           aria-label={`Edit question: ${question.questionText.substring(0,30)}...`}
         >
           Edit
         </button>
         <button
           onClick={onDelete}
-          className="delete-question-button px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors flex items-center space-x-1"
+          className="delete-question-button px-3 py-1 text-xs bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white rounded-md transition-colors flex items-center space-x-1"
           aria-label={`Delete question: ${question.questionText.substring(0,30)}...`}
         >
           <i className="fa-solid fa-trash fa-fw"></i>

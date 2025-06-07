@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 interface HoldToDeleteButtonProps {
@@ -73,23 +74,14 @@ const HoldToDeleteButton: React.FC<HoldToDeleteButtonProps> = ({
   }, [label, isHolding]);
 
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault(); // Prevent text selection, etc.
-    startInteraction();
-  };
-  const handleTouchStart = (e: React.TouchEvent<HTMLButtonElement>) => {
-    e.preventDefault(); // Important for touch devices
-    startInteraction();
-  };
-
   return (
     <button
       type="button"
-      className="relative w-full px-3 py-1.5 text-sm text-white rounded-md transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 flex items-center justify-center space-x-2 bg-red-600 hover:bg-red-700 focus:ring-red-500 focus:ring-offset-slate-100 overflow-hidden"
-      onMouseDown={handleMouseDown}
+      className="relative w-full px-3 py-1.5 text-sm text-white rounded-md transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 flex items-center justify-center space-x-2 bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] focus:ring-[var(--accent-red)] focus:ring-offset-[var(--bg-secondary)] overflow-hidden"
+      onMouseDown={startInteraction}
       onMouseUp={resetInteraction}
       onMouseLeave={resetInteraction} // If mouse leaves button area
-      onTouchStart={handleTouchStart}
+      onTouchStart={startInteraction}
       onTouchEnd={resetInteraction}
       onTouchCancel={resetInteraction}
       aria-label={`Hold to confirm ${label}`}

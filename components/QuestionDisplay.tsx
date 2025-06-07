@@ -1,12 +1,14 @@
+
 import React from 'react';
-import type { Question, Option } from '../App.tsx';
+import type { Question } from '../App.tsx'; 
 
 interface QuestionDisplayProps {
   question: Question;
   questionNumber: number;
-  selectedOptionId: string | null;
-  isSubmitted: boolean;
+  selectedOptionId: string | null; 
+  isSubmitted: boolean; 
   onOptionSelect: (optionId: string) => void;
+  correctOptionIdForDisplay?: string; 
 }
 
 const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
@@ -15,47 +17,67 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   selectedOptionId,
   isSubmitted,
   onOptionSelect,
+  correctOptionIdForDisplay,
 }) => {
   return (
     <div>
-      <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-slate-700" id={`question-${question.id}-text`}>
+      <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-[var(--text-primary)] whitespace-pre-wrap" id={`question-${question.id}-text`}>
         {questionNumber}. {question.questionText}
       </h3>
       {question.type === 'mcq' && question.options && (
         <div className="space-y-3" role="radiogroup" aria-labelledby={`question-${question.id}-text`}>
           {question.options.map((option, index) => {
-            const isSelected = selectedOptionId === option.id;
+            const isActuallySelectedByUser = selectedOptionId === option.id;
             const optionLabel = String.fromCharCode(65 + index);
-            let buttonClass = "w-full text-left p-3 rounded-md border transition-all duration-150 flex items-center text-sm sm:text-base ";
+
+            let baseButtonClass = "w-full text-left p-3 rounded-md transition-all duration-150 flex items-center text-sm sm:text-base ";
+            let specificStyling = "";
+            let iconClass = "";
 
             if (isSubmitted) {
-              if (option.id === question.correctOptionId) {
-                buttonClass += "bg-green-500 border-green-400 text-white hover:bg-green-500 font-medium";
-              } else if (isSelected && option.id !== question.correctOptionId) {
-                buttonClass += "bg-red-500 border-red-400 text-white hover:bg-red-500 font-medium";
-              } else {
-                buttonClass += "bg-slate-100 border-slate-300 text-slate-500 opacity-80 cursor-not-allowed";
+              baseButtonClass += " border-2 "; // Thicker border for all submitted options
+              const isSystemCorrect = option.id === correctOptionIdForDisplay;
+
+              if (isSystemCorrect) {
+                specificStyling = "border-[var(--accent-green)] text-[var(--accent-green)] bg-[var(--accent-green-bg-soft)] font-medium";
+                iconClass = "fa-solid fa-check-circle text-[var(--accent-green)]";
+                if (isActuallySelectedByUser) {
+                  // Make selected correct answer stand out a bit more if needed, e.g. thicker ring or slight shadow
+                  specificStyling += " ring-2 ring-[var(--accent-green)] ring-offset-1 ring-offset-[var(--bg-primary)]";
+                }
+              } else if (isActuallySelectedByUser && !isSystemCorrect) {
+                specificStyling = "border-[var(--accent-red)] text-[var(--accent-red)] bg-[var(--accent-red-bg-soft)] font-medium";
+                iconClass = "fa-solid fa-times-circle text-[var(--accent-red)]";
+              } else { // Other options (not selected by user, not the correct answer)
+                specificStyling = "border-[var(--border-color)] text-[var(--text-secondary)] bg-[var(--bg-primary)] opacity-60 cursor-not-allowed";
+                iconClass = "fa-regular fa-circle text-[var(--text-secondary)] opacity-60";
               }
-            } else {
-              if (isSelected) {
-                buttonClass += "bg-blue-100 border-blue-500 text-blue-700 ring-2 ring-blue-500 font-medium";
+            } else { // Not submitted yet
+              baseButtonClass += " border "; // Standard border thickness
+              if (isActuallySelectedByUser) {
+                specificStyling = "bg-[var(--accent-primary-bg-selection)] border-[var(--accent-primary)] text-[var(--btn-primary-text)] font-medium";
+                iconClass = "fa-solid fa-dot-circle text-[var(--btn-primary-text)]";
               } else {
-                buttonClass += "bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400";
+                specificStyling = "bg-[var(--bg-primary)] border-[var(--border-color)] text-[var(--text-secondary)]";
+                iconClass = "fa-regular fa-circle text-[var(--text-secondary)]";
               }
             }
+            
+            const finalButtonClass = baseButtonClass + specificStyling;
 
             return (
               <button
                 key={option.id}
                 data-option-id={option.id}
-                className={`user-option-button ${buttonClass}`}
+                className={`user-option-button ${finalButtonClass}`}
                 onClick={() => onOptionSelect(option.id)}
-                disabled={isSubmitted}
+                disabled={isSubmitted} 
                 role="radio"
-                aria-checked={isSelected}
+                aria-checked={isActuallySelectedByUser && !isSubmitted} 
                 aria-label={`Option ${optionLabel}: ${option.text}`}
               >
-                <span className="font-semibold mr-2.5 text-slate-500">{optionLabel}.</span>
+                <i className={`${iconClass} mr-2.5 text-lg w-5 text-center`}></i> {/* Ensure icon takes consistent space */}
+                <span className={`font-semibold mr-1.5`}>{optionLabel}.</span>
                 <span>{option.text}</span>
               </button>
             );
@@ -63,8 +85,8 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
         </div>
       )}
       {question.type === 'written' && (
-        <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
-            <p className="text-slate-700 italic">This is a written response question. Consider your answer based on the prompt above.</p>
+        <div className="p-3 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md">
+            <p className="text-[var(--text-primary)] italic">This is a written response question.</p>
         </div>
       )}
     </div>
