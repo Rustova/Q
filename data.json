@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2025-06-07T20:29:51.085Z",
+  "lastUpdated": "2025-06-07T20:43:53.601Z",
   "subjects": [
     {
       "id": "17493103304235587rwe",
@@ -23,6 +23,22 @@
               "questionText": "slslsls.",
               "type": "written",
               "id": "1749326771527e4815w2"
+            },
+            {
+              "questionText": "lslsls",
+              "type": "mcq",
+              "options": [
+                {
+                  "id": "option-17493290274100r2gyrv-0",
+                  "text": "splsls"
+                },
+                {
+                  "id": "option-1749329027410wv92cqb-1",
+                  "text": "pss;ls"
+                }
+              ],
+              "correctOptionId": "option-17493290274100r2gyrv-0",
+              "id": "1749329027410g4hrshs"
             }
           ],
           "isStartable": true
