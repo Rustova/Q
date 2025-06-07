@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "1749298371882ewj7okr",
+    "name": "la",
+    "quizzes": [
+      {
+        "id": "174929837569796rr6dg",
+        "name": "lalsls",
+        "questions": [
+          {
+            "questionText": "lalssl",
+            "type": "written",
+            "id": "1749298382597kjmn36z"
+          }
+        ],
+        "isStartable": false
+      }
+    ]
+  }
+]
