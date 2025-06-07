@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2025-06-07T15:33:00.101Z",
+  "lastUpdated": "2025-06-07T16:19:37.771Z",
   "subjects": [
     {
       "id": "17493103304235587rwe",
@@ -9,7 +9,20 @@
     {
       "id": "17493103349514jon76q",
       "name": "جراحة",
-      "quizzes": []
+      "quizzes": [
+        {
+          "id": "17493131531579g0ii51",
+          "name": "Lecture 1",
+          "questions": [
+            {
+              "questionText": "your name",
+              "type": "written",
+              "id": "1749313165751y4egbc5"
+            }
+          ],
+          "isStartable": true
+        }
+      ]
     },
     {
       "id": "17493103388137gsf8yu",
