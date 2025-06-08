@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "username": "@noha",
+    "password": "password",
+    "friends": [],
+    "friendRequestsSent": [],
+    "friendRequestsReceived": [],
+    "challengesSent": [],
+    "challengesReceived": []
+  }
+]
