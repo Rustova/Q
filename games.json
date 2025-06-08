@@ -201,7 +201,7 @@
     ],
     "status": "active",
     "createdAt": "2025-06-08T21:51:00.589Z",
-    "updatedAt": "2025-06-08T21:54:12.998Z",
+    "updatedAt": "2025-06-08T21:54:39.004Z",
     "currentQuestionIndex": 0,
     "challengerAnswers": {},
     "opponentAnswers": {
@@ -240,9 +240,15 @@
         "selectedOptionId": "option-mbo3spziwlfcdqgek-1",
         "isCorrect": false,
         "timeTakenMs": 6973
+      },
+      "1749382612070lhi4n8o": {
+        "questionId": "1749382612070lhi4n8o",
+        "selectedOptionId": "option-0",
+        "isCorrect": true,
+        "timeTakenMs": 3004
       }
     },
     "challengerScore": 0,
-    "opponentScore": 2
+    "opponentScore": 3
   }
 ]
