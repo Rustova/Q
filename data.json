@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2025-06-06T11:40:19.332Z",
+  "lastUpdated": "2025-06-08T13:53:44.816Z",
   "subjects": [
     {
       "id": "17493103304235587rwe",
@@ -151,6 +151,54 @@
               "id": "1749352060163ufy8x9i"
             }
           ],
+          "isStartable": true
+        },
+        {
+          "id": "17493906746675dxyd2p",
+          "name": "Lecture 2",
+          "questions": [],
+          "isStartable": true
+        },
+        {
+          "id": "1749390679596lidacwh",
+          "name": "Lecture 3",
+          "questions": [],
+          "isStartable": true
+        },
+        {
+          "id": "1749390685648ek7bnki",
+          "name": "Lecture 4",
+          "questions": [],
+          "isStartable": true
+        },
+        {
+          "id": "17493906888059mo71r1",
+          "name": "Lecture 5",
+          "questions": [],
+          "isStartable": true
+        },
+        {
+          "id": "1749390692945xbkp5j9",
+          "name": "Lecture 6",
+          "questions": [],
+          "isStartable": true
+        },
+        {
+          "id": "17493906964933ws3n09",
+          "name": "Lecture 7",
+          "questions": [],
+          "isStartable": true
+        },
+        {
+          "id": "1749390699732or5svuu",
+          "name": "Lecture 8",
+          "questions": [],
+          "isStartable": true
+        },
+        {
+          "id": "1749390702929ll4w6ux",
+          "name": "Lecture 9",
+          "questions": [],
           "isStartable": true
         }
       ]
