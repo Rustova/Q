@@ -201,10 +201,17 @@
     ],
     "status": "active",
     "createdAt": "2025-06-08T21:18:35.806Z",
-    "updatedAt": "2025-06-08T21:18:35.806Z",
+    "updatedAt": "2025-06-08T21:19:11.221Z",
     "currentQuestionIndex": 0,
     "challengerAnswers": {},
-    "opponentAnswers": {},
+    "opponentAnswers": {
+      "mbo3spzi3egpsi0li": {
+        "questionId": "mbo3spzi3egpsi0li",
+        "selectedOptionId": null,
+        "isCorrect": false,
+        "timeTakenMs": 30001
+      }
+    },
     "challengerScore": 0,
     "opponentScore": 0
   }
