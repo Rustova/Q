@@ -4,7 +4,9 @@
     "password": "password",
     "friends": [],
     "friendRequestsSent": [],
-    "friendRequestsReceived": [],
+    "friendRequestsReceived": [
+      "@omar"
+    ],
     "challengesSent": [],
     "challengesReceived": []
   },
@@ -12,7 +14,9 @@
     "username": "@omar",
     "password": "password",
     "friends": [],
-    "friendRequestsSent": [],
+    "friendRequestsSent": [
+      "@noha"
+    ],
     "friendRequestsReceived": [],
     "challengesSent": [],
     "challengesReceived": []
