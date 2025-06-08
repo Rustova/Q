@@ -1,10 +1,120 @@
 {
-  "lastUpdated": "2025-06-08T01:29:55.401Z",
+  "lastUpdated": "2025-06-08T03:07:29.441Z",
   "subjects": [
     {
       "id": "17493103304235587rwe",
       "name": "باطنة",
-      "quizzes": []
+      "quizzes": [
+        {
+          "id": "1749351999653h7alov3",
+          "name": "Lecture 1",
+          "questions": [
+            {
+              "questionText": "slslsl",
+              "type": "written",
+              "id": "17493520050597kbun74"
+            },
+            {
+              "questionText": "a;a;s;s;s;s",
+              "type": "written",
+              "id": "1749352007561cd0kp3z"
+            },
+            {
+              "questionText": "a;a;;s;s;",
+              "type": "written",
+              "id": "1749352009787txuzflr"
+            },
+            {
+              "questionText": "a;a;s;;s",
+              "type": "mcq",
+              "options": [
+                {
+                  "id": "option-1749352020222etu6sg5-0",
+                  "text": "apa;;s;s"
+                },
+                {
+                  "id": "option-1749352020222rmsutl8-1",
+                  "text": "wpa;s;"
+                },
+                {
+                  "id": "option-1749352020222zqcbi9x-2",
+                  "text": "wps;s;"
+                },
+                {
+                  "id": "option-17493520202221cpy4d1-3",
+                  "text": "wps;s;"
+                }
+              ],
+              "correctOptionId": "option-1749352020222etu6sg5-0",
+              "id": "1749352020222nlkn8k9"
+            },
+            {
+              "questionText": "s;ls;s.s.s.",
+              "type": "mcq",
+              "options": [
+                {
+                  "id": "option-17493520300266mjszaz-0",
+                  "text": "sps;s;swls"
+                },
+                {
+                  "id": "option-1749352030026o419rvh-1",
+                  "text": "spslsls"
+                },
+                {
+                  "id": "option-1749352030026vzj8jee-2",
+                  "text": "sps;sps"
+                },
+                {
+                  "id": "option-1749352030026bfrca4p-3",
+                  "text": "papsls"
+                }
+              ],
+              "correctOptionId": "option-1749352030026vzj8jee-2",
+              "id": "1749352030026x6iedpu"
+            },
+            {
+              "questionText": "sps;;s;s;",
+              "type": "written",
+              "id": "1749352032694ns9tdzp"
+            },
+            {
+              "questionText": "psps;s;",
+              "type": "written",
+              "id": "1749352035509jx5aeit"
+            },
+            {
+              "questionText": "s[;ss;;s",
+              "type": "written",
+              "id": "1749352037852277gb3i"
+            },
+            {
+              "questionText": "sps;s;s;",
+              "type": "mcq",
+              "options": [
+                {
+                  "id": "option-1749352045943k3btyq2-0",
+                  "text": "pss;pss;p"
+                },
+                {
+                  "id": "option-174935204594313xv87d-1",
+                  "text": "wps;s;"
+                },
+                {
+                  "id": "option-1749352045943wzza1i8-2",
+                  "text": "wps;s;"
+                },
+                {
+                  "id": "option-1749352045943hutbhd2-3",
+                  "text": "wpw;ps"
+                }
+              ],
+              "correctOptionId": "option-174935204594313xv87d-1",
+              "id": "1749352045943a9z4jv6"
+            }
+          ],
+          "isStartable": true
+        }
+      ]
     },
     {
       "id": "17493103349514jon76q",
