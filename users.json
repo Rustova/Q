@@ -4,7 +4,9 @@
     "password": "password",
     "friends": [],
     "friendRequestsSent": [],
-    "friendRequestsReceived": [],
+    "friendRequestsReceived": [
+      "@noha"
+    ],
     "challengesSent": [
       {
         "challengeId": "challenge-mbo3gj6p7wa6gcxeo",
@@ -42,7 +44,9 @@
     "username": "@noha",
     "password": "password",
     "friends": [],
-    "friendRequestsSent": [],
+    "friendRequestsSent": [
+      "@omar"
+    ],
     "friendRequestsReceived": [],
     "challengesSent": [
       {
