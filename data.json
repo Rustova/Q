@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2025-06-08T11:29:01.967Z",
+  "lastUpdated": "2025-06-08T11:37:19.437Z",
   "subjects": [
     {
       "id": "17493103304235587rwe",
@@ -9,6 +9,30 @@
           "id": "1749351999653h7alov3",
           "name": "Lecture 1",
           "questions": [
+            {
+              "questionText": "Which of the following is considered a common side effect of the above illustrated drug\n(Trifeme /Ethinylestradiol+ Levonorgestrel)?",
+              "type": "mcq",
+              "options": [
+                {
+                  "id": "option-0",
+                  "text": "Bleeding tendency"
+                },
+                {
+                  "id": "option-1",
+                  "text": "Weight gain"
+                },
+                {
+                  "id": "option-2",
+                  "text": "Multiple births"
+                },
+                {
+                  "id": "option-3",
+                  "text": "Hypoglycemia"
+                }
+              ],
+              "correctOptionId": "option-0",
+              "id": "1749382612070lhi4n8o"
+            },
             {
               "questionText": "slslsl",
               "type": "written",
