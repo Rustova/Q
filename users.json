@@ -2,21 +2,21 @@
   {
     "username": "@noha",
     "password": "password",
-    "friends": [],
-    "friendRequestsSent": [],
-    "friendRequestsReceived": [
+    "friends": [
       "@omar"
     ],
+    "friendRequestsSent": [],
+    "friendRequestsReceived": [],
     "challengesSent": [],
     "challengesReceived": []
   },
   {
     "username": "@omar",
     "password": "password",
-    "friends": [],
-    "friendRequestsSent": [
+    "friends": [
       "@noha"
     ],
+    "friendRequestsSent": [],
     "friendRequestsReceived": [],
     "challengesSent": [],
     "challengesReceived": []
