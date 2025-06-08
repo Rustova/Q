@@ -201,9 +201,16 @@
     ],
     "status": "active",
     "createdAt": "2025-06-08T21:18:35.806Z",
-    "updatedAt": "2025-06-08T21:21:41.225Z",
+    "updatedAt": "2025-06-08T21:22:37.636Z",
     "currentQuestionIndex": 0,
-    "challengerAnswers": {},
+    "challengerAnswers": {
+      "mbo3sme6a1cg45h7p": {
+        "questionId": "mbo3sme6a1cg45h7p",
+        "selectedOptionId": "option-mbo3sme6aak0nxept-0",
+        "isCorrect": true,
+        "timeTakenMs": 26420
+      }
+    },
     "opponentAnswers": {
       "mbo3spzi3egpsi0li": {
         "questionId": "mbo3spzi3egpsi0li",
@@ -236,7 +243,7 @@
         "timeTakenMs": 30026
       }
     },
-    "challengerScore": 0,
+    "challengerScore": 1,
     "opponentScore": 0
   }
 ]
