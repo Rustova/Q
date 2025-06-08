@@ -7,7 +7,15 @@
     ],
     "friendRequestsSent": [],
     "friendRequestsReceived": [],
-    "challengesSent": [],
+    "challengesSent": [
+      {
+        "challengeId": "challenge-mbo4sh867rhunkki9",
+        "opponentUsername": "@omar",
+        "status": "pending_opponent_action",
+        "createdAt": "2025-06-08T20:44:11.190Z",
+        "updatedAt": "2025-06-08T20:44:11.190Z"
+      }
+    ],
     "challengesReceived": []
   },
   {
@@ -19,6 +27,14 @@
     "friendRequestsSent": [],
     "friendRequestsReceived": [],
     "challengesSent": [],
-    "challengesReceived": []
+    "challengesReceived": [
+      {
+        "challengeId": "challenge-mbo4sh867rhunkki9",
+        "challengerUsername": "@noha",
+        "status": "pending_opponent_action",
+        "createdAt": "2025-06-08T20:44:11.190Z",
+        "updatedAt": "2025-06-08T20:44:11.190Z"
+      }
+    ]
   }
 ]
