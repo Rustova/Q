@@ -25,9 +25,9 @@
       {
         "challengeId": "challenge-mbo3unozk9iq3zbsy",
         "opponentUsername": "@noha",
-        "status": "pending_opponent_action",
+        "status": "active",
         "createdAt": "2025-06-08T20:17:53.267Z",
-        "updatedAt": "2025-06-08T20:17:53.267Z"
+        "updatedAt": "2025-06-08T20:18:39.458Z"
       }
     ],
     "challengesReceived": [
@@ -75,9 +75,9 @@
       {
         "challengeId": "challenge-mbo3unozk9iq3zbsy",
         "challengerUsername": "@omar",
-        "status": "pending_opponent_action",
+        "status": "active",
         "createdAt": "2025-06-08T20:17:53.267Z",
-        "updatedAt": "2025-06-08T20:17:53.267Z"
+        "updatedAt": "2025-06-08T20:18:39.458Z"
       }
     ]
   },
