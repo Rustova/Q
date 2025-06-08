@@ -9,19 +9,19 @@
   {
     "username": "@noha",
     "password": "password",
-    "friends": [],
-    "friendRequestsSent": [
+    "friends": [
       "@noha_mostafa"
     ],
+    "friendRequestsSent": [],
     "friendRequestsReceived": []
   },
   {
     "username": "@noha_mostafa",
     "password": "password",
-    "friends": [],
-    "friendRequestsSent": [],
-    "friendRequestsReceived": [
+    "friends": [
       "@noha"
-    ]
+    ],
+    "friendRequestsSent": [],
+    "friendRequestsReceived": []
   }
 ]
