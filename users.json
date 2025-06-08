@@ -9,6 +9,7 @@
   {
     "username": "@noha",
     "password": "password",
+    "profileIconUrl": "https://raw.githubusercontent.com/Rustova/Q/main/icons/2.png",
     "friends": [],
     "friendRequestsSent": [],
     "friendRequestsReceived": []
