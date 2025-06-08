@@ -199,9 +199,9 @@
         "startTime": "2025-06-08T21:11:09.954Z"
       }
     ],
-    "status": "active",
+    "status": "completed",
     "createdAt": "2025-06-08T21:06:34.953Z",
-    "updatedAt": "2025-06-08T21:12:15.067Z",
+    "updatedAt": "2025-06-08T21:12:56.649Z",
     "currentQuestionIndex": 0,
     "challengerAnswers": {},
     "opponentAnswers": {
@@ -237,6 +237,7 @@
       }
     },
     "challengerScore": 0,
-    "opponentScore": 0
+    "opponentScore": 0,
+    "winnerUsername": null
   }
 ]
