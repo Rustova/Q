@@ -4,21 +4,30 @@
     "password": "password",
     "friends": [],
     "friendRequestsSent": [],
-    "friendRequestsReceived": []
+    "friendRequestsReceived": [
+      "@noha"
+    ],
+    "challengesSent": [],
+    "challengesReceived": []
   },
   {
     "username": "@noha",
     "password": "password",
-    "profileIconUrl": "https://raw.githubusercontent.com/Rustova/Q/main/icons/7.png",
     "friends": [],
-    "friendRequestsSent": [],
-    "friendRequestsReceived": []
+    "friendRequestsSent": [
+      "@omar"
+    ],
+    "friendRequestsReceived": [],
+    "challengesSent": [],
+    "challengesReceived": []
   },
   {
     "username": "@noha_mostafa",
     "password": "password",
     "friends": [],
     "friendRequestsSent": [],
-    "friendRequestsReceived": []
+    "friendRequestsReceived": [],
+    "challengesSent": [],
+    "challengesReceived": []
   }
 ]
