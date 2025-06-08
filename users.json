@@ -15,6 +15,13 @@
         "createdAt": "2025-06-08T20:44:11.190Z",
         "updatedAt": "2025-06-08T20:45:57.764Z",
         "activeGameId": "game-mbo4urgkql3e6cjzc"
+      },
+      {
+        "challengeId": "challenge-mbo5kadt1lqmp6zk6",
+        "opponentUsername": "@omar",
+        "status": "pending_opponent_action",
+        "createdAt": "2025-06-08T21:05:48.689Z",
+        "updatedAt": "2025-06-08T21:05:48.689Z"
       }
     ],
     "challengesReceived": []
@@ -36,6 +43,13 @@
         "createdAt": "2025-06-08T20:44:11.190Z",
         "updatedAt": "2025-06-08T20:45:57.764Z",
         "activeGameId": "game-mbo4urgkql3e6cjzc"
+      },
+      {
+        "challengeId": "challenge-mbo5kadt1lqmp6zk6",
+        "challengerUsername": "@noha",
+        "status": "pending_opponent_action",
+        "createdAt": "2025-06-08T21:05:48.689Z",
+        "updatedAt": "2025-06-08T21:05:48.689Z"
       }
     ],
     "activeGameId": "game-mbo4urgkql3e6cjzc"
