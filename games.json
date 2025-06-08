@@ -199,9 +199,9 @@
         "startTime": "2025-06-08T21:33:20.177Z"
       }
     ],
-    "status": "active",
+    "status": "completed",
     "createdAt": "2025-06-08T21:28:45.177Z",
-    "updatedAt": "2025-06-08T21:35:12.801Z",
+    "updatedAt": "2025-06-08T21:40:30.159Z",
     "currentQuestionIndex": 0,
     "challengerAnswers": {},
     "opponentAnswers": {
@@ -267,6 +267,7 @@
       }
     },
     "challengerScore": 0,
-    "opponentScore": 4
+    "opponentScore": 4,
+    "winnerUsername": "@omar"
   }
 ]
