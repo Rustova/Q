@@ -11,12 +11,14 @@
       {
         "challengeId": "challenge-mbo4sh867rhunkki9",
         "opponentUsername": "@omar",
-        "status": "pending_opponent_action",
+        "status": "active",
         "createdAt": "2025-06-08T20:44:11.190Z",
-        "updatedAt": "2025-06-08T20:44:11.190Z"
+        "updatedAt": "2025-06-08T20:45:57.764Z",
+        "activeGameId": "game-mbo4urgkql3e6cjzc"
       }
     ],
-    "challengesReceived": []
+    "challengesReceived": [],
+    "activeGameId": "game-mbo4urgkql3e6cjzc"
   },
   {
     "username": "@omar",
@@ -31,10 +33,12 @@
       {
         "challengeId": "challenge-mbo4sh867rhunkki9",
         "challengerUsername": "@noha",
-        "status": "pending_opponent_action",
+        "status": "active",
         "createdAt": "2025-06-08T20:44:11.190Z",
-        "updatedAt": "2025-06-08T20:44:11.190Z"
+        "updatedAt": "2025-06-08T20:45:57.764Z",
+        "activeGameId": "game-mbo4urgkql3e6cjzc"
       }
-    ]
+    ],
+    "activeGameId": "game-mbo4urgkql3e6cjzc"
   }
 ]
