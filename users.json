@@ -2,18 +2,14 @@
   {
     "username": "@omar",
     "password": "password",
-    "friends": [
-      "@noha"
-    ],
+    "friends": [],
     "friendRequestsSent": [],
     "friendRequestsReceived": []
   },
   {
     "username": "@noha",
     "password": "password",
-    "friends": [
-      "@omar"
-    ],
+    "friends": [],
     "friendRequestsSent": [],
     "friendRequestsReceived": []
   },
