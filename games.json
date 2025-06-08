@@ -199,9 +199,9 @@
         "startTime": "2025-06-08T21:23:10.806Z"
       }
     ],
-    "status": "active",
+    "status": "completed",
     "createdAt": "2025-06-08T21:18:35.806Z",
-    "updatedAt": "2025-06-08T21:23:15.730Z",
+    "updatedAt": "2025-06-08T21:23:40.768Z",
     "currentQuestionIndex": 0,
     "challengerAnswers": {
       "mbo3sme6a1cg45h7p": {
@@ -256,6 +256,7 @@
       }
     },
     "challengerScore": 2,
-    "opponentScore": 0
+    "opponentScore": 0,
+    "winnerUsername": "@noha"
   }
 ]
