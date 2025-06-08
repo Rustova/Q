@@ -201,7 +201,7 @@
     ],
     "status": "active",
     "createdAt": "2025-06-08T20:45:57.764Z",
-    "updatedAt": "2025-06-08T20:50:33.380Z",
+    "updatedAt": "2025-06-08T20:51:03.257Z",
     "currentQuestionIndex": 0,
     "challengerAnswers": {},
     "opponentAnswers": {
@@ -234,6 +234,12 @@
         "selectedOptionId": null,
         "isCorrect": false,
         "timeTakenMs": 30200
+      },
+      "mbo3sme6a1cg45h7p": {
+        "questionId": "mbo3sme6a1cg45h7p",
+        "selectedOptionId": null,
+        "isCorrect": false,
+        "timeTakenMs": 30005
       }
     },
     "challengerScore": 0,
