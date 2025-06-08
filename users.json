@@ -4,13 +4,17 @@
     "password": "password",
     "friends": [],
     "friendRequestsSent": [],
-    "friendRequestsReceived": []
+    "friendRequestsReceived": [
+      "@noha"
+    ]
   },
   {
     "username": "@noha",
     "password": "password",
     "friends": [],
-    "friendRequestsSent": [],
+    "friendRequestsSent": [
+      "@omar"
+    ],
     "friendRequestsReceived": []
   },
   {
