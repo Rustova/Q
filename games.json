@@ -201,9 +201,16 @@
     ],
     "status": "completed",
     "createdAt": "2025-06-08T21:28:45.177Z",
-    "updatedAt": "2025-06-08T21:40:30.159Z",
+    "updatedAt": "2025-06-08T21:40:32.525Z",
     "currentQuestionIndex": 0,
-    "challengerAnswers": {},
+    "challengerAnswers": {
+      "mbo3spzi3egpsi0li": {
+        "questionId": "mbo3spzi3egpsi0li",
+        "selectedOptionId": null,
+        "isCorrect": false,
+        "timeTakenMs": 429591
+      }
+    },
     "opponentAnswers": {
       "mbo3tlv0lchuyw3cr": {
         "questionId": "mbo3tlv0lchuyw3cr",
