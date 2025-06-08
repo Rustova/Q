@@ -1,6 +1,10 @@
-[
-  {
-    "username": "@omar_11",
-    "password": "password"
-  }
-]
+{
+  "users": [
+    {
+      "id": "1749402547251vdm8cnq",
+      "email": "om.ar.ib.acc@gmail.com",
+      "username": "om_ar_ib",
+      "password": "password"
+    }
+  ]
+}
