@@ -147,7 +147,10 @@ const App: React.FC = () => {
   const [showManageSubjectsSection, setShowManageSubjectsSection] = useState(true);
   const [showManageQuizzesSection, setShowManageQuizzesSection] = useState(true);
 
-  const [pdfAnimationShouldPlayOnSubjectViewLoad, setPdfAnimationShouldPlayOnSubjectViewLoad] = useState<boolean>(false);
+  const [isPdfAnimationActive, setIsPdfAnimationActive] = useState<boolean>(false);
+  const [hasPdfButtonAnimationPlayedOnce, setHasPdfButtonAnimationPlayedOnce] = useState<boolean>(() => {
+    return localStorage.getItem('pdfButtonAnimationPlayedOnce') === 'true';
+  });
 
 
   const fetchAttemptedRef = useRef(false);
@@ -312,7 +315,7 @@ const App: React.FC = () => {
     setSelectedSubjectForUser(null);
     setSelectedQuizForUser(null);
     resetUserQuizState();
-    setPdfAnimationShouldPlayOnSubjectViewLoad(false);
+    setIsPdfAnimationActive(false);
 
     if (isAdminAuthenticated) { 
         localStorage.setItem('wasAdminViewBeforeRefresh', 'true');
@@ -327,9 +330,7 @@ const App: React.FC = () => {
     setActiveSubjectIdForAdminState(null);
     setActiveQuizIdForAdminState(null);
     setEditingQuestion(null);
-    // If returning from Admin, we might want the animation. Or maybe not.
-    // For now, let's assume direct admin->user doesn't trigger it unless explicitly returning from a quiz flow.
-    setPdfAnimationShouldPlayOnSubjectViewLoad(false); 
+    setIsPdfAnimationActive(false); 
   };
 
 
@@ -354,7 +355,7 @@ const App: React.FC = () => {
     setActiveSubjectIdForAdminState(null);
     setActiveQuizIdForAdminState(null);
     setEditingQuestion(null);
-    setPdfAnimationShouldPlayOnSubjectViewLoad(false);
+    setIsPdfAnimationActive(false);
   };
 
   const handleCloseAdminLoginModal = () => {
@@ -363,7 +364,7 @@ const App: React.FC = () => {
     if (!isAdminAuthenticated) {
       setCurrentAppView('SubjectSelection');
       localStorage.removeItem('wasAdminViewBeforeRefresh');
-      setPdfAnimationShouldPlayOnSubjectViewLoad(false);
+      setIsPdfAnimationActive(false);
     }
   };
 
@@ -629,7 +630,7 @@ const App: React.FC = () => {
     setSelectedQuizForUser(null); 
     resetUserQuizState();
     setCurrentAppView('QuizSelection');
-    setPdfAnimationShouldPlayOnSubjectViewLoad(false); // Don't play when going forward
+    setIsPdfAnimationActive(false); // Don't play when going forward
   };
 
   const handleSelectQuizForUser = (quizId: string) => {
@@ -647,7 +648,9 @@ const App: React.FC = () => {
     setSelectedQuizForUser(null);
     resetUserQuizState();
     setCurrentAppView('SubjectSelection');
-    setPdfAnimationShouldPlayOnSubjectViewLoad(true); // Trigger animation on return
+    if (!hasPdfButtonAnimationPlayedOnce) {
+        setIsPdfAnimationActive(true); // Trigger animation on return only if it hasn't played globally
+    }
   };
 
   const handleBackToQuizListFromUserView = () => {
@@ -798,6 +801,14 @@ const App: React.FC = () => {
     }
   };
 
+  const handlePdfAnimationComplete = () => {
+    setIsPdfAnimationActive(false);
+    if (!hasPdfButtonAnimationPlayedOnce) {
+      setHasPdfButtonAnimationPlayedOnce(true);
+      localStorage.setItem('pdfButtonAnimationPlayedOnce', 'true');
+    }
+  };
+
   const activeAdminSubject = subjects.find(s => s.id === activeSubjectIdForAdmin);
   const activeAdminQuiz = activeAdminSubject?.quizzes.find(q => q.id === activeQuizIdForAdmin);
   
@@ -892,8 +903,8 @@ const App: React.FC = () => {
         return <SubjectSelectionView 
                   subjects={subjects} 
                   onSelectSubject={handleSelectSubjectForUser} 
-                  playAnimation={pdfAnimationShouldPlayOnSubjectViewLoad}
-                  onAnimationComplete={() => setPdfAnimationShouldPlayOnSubjectViewLoad(false)}
+                  playAnimation={isPdfAnimationActive && !hasPdfButtonAnimationPlayedOnce}
+                  onAnimationComplete={handlePdfAnimationComplete}
                 />;
       
       case 'UserQuiz':
@@ -939,8 +950,8 @@ const App: React.FC = () => {
         return <SubjectSelectionView 
                 subjects={subjects} 
                 onSelectSubject={handleSelectSubjectForUser} 
-                playAnimation={pdfAnimationShouldPlayOnSubjectViewLoad}
-                onAnimationComplete={() => setPdfAnimationShouldPlayOnSubjectViewLoad(false)}
+                playAnimation={isPdfAnimationActive && !hasPdfButtonAnimationPlayedOnce}
+                onAnimationComplete={handlePdfAnimationComplete}
               />;
     }
   };
@@ -987,6 +998,10 @@ const App: React.FC = () => {
           onSetQuestionDisplayMode={handleSetUserQuestionDisplayMode}
         />
       )}
+      <div 
+        className={`pdf-animation-overlay ${isPdfAnimationActive && !hasPdfButtonAnimationPlayedOnce ? 'visible' : ''}`}
+        aria-hidden={!(isPdfAnimationActive && !hasPdfButtonAnimationPlayedOnce)}
+      ></div>
     </>
   );
 };

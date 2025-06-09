@@ -241,6 +241,7 @@
     .animate-settings-init {
       display: inline-block; /* Ensures transform works correctly */
       animation: spinAndHighlight 1.2s ease-in-out;
+      transform-origin: center; /* Ensures rotation is around the icon's center */
     }
 
     /* PDF Button Multi-Stage Animation Classes & Keyframes */
@@ -259,13 +260,13 @@
         transform: translate(0px, 0px) scale(1);
       }
       to {
-        transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(2.5);
+        transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(1.5);
       }
     }
 
     .pdf-button-shining {
       /* JS sets: position:fixed, top, left, width, height (from initial), 
-                  transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(2.5), 
+                  transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(1.5),
                   z-index, overflow:hidden, transform-origin */
     }
 
@@ -296,19 +297,34 @@
 
     .pdf-button-returning {
       /* JS ensures button is position:fixed, width/height from initial, transform-origin.
-         Current transform is translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(2.5). */
+         Current transform is translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(1.5). */
       animation: shrinkAndReturnAnimation 0.6s ease-in forwards;
     }
 
     @keyframes shrinkAndReturnAnimation {
       from {
-        transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(2.5);
+        transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(1.5);
         opacity: 1;
       }
       to {
         transform: translate(0px, 0px) scale(1);
         opacity: 1;
       }
+    }
+
+    /* PDF Animation Overlay */
+    .pdf-animation-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.6); /* Darker overlay */
+      z-index: 900; /* Below animating button (1000), above other content */
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      pointer-events: none; /* Allow interaction when not visible */
+    }
+    .pdf-animation-overlay.visible {
+      opacity: 1;
+      pointer-events: auto; /* Block interaction when visible */
     }
 
   </style>
@@ -321,6 +337,6 @@
   <div id="modal-root"></div> <!-- Portal for modals -->
   <div id="user-auth-modal-root"></div> <!-- Portal for user auth modal -->
   <audio id="shine-sound" src="/assets/shine.wav" preload="auto"></audio>
-<script type="module" src="/index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
 </body>
 </html>

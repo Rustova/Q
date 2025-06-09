@@ -4,9 +4,9 @@ import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
 import type { Subject, Quiz, Question } from '../App.tsx';
 import QuestionForm from './QuestionForm.tsx';
 import AdminQuestionListItem from './AdminQuestionListItem.tsx';
-import HoldToDeleteButton from './HoldToDeleteButton.tsx'; // Re-enabled
+import HoldToDeleteButton from './HoldToDeleteButton.tsx';
 import ConfirmationModal from './ConfirmationModal.tsx'; 
-import AppConfig, { PLACEHOLDER_GITHUB_DATA_URL } from '../config.ts'; // Removed PAT placeholders
+import AppConfig, { PLACEHOLDER_GITHUB_DATA_URL, PLACEHOLDER_APPS_SCRIPT_SECRET, PLACEHOLDER_APPS_SCRIPT_PAT_URL } from '../config.ts';
 import EditQuestionModal from './EditQuestionModal.tsx';
 import ReorderQuestionsModal from './ReorderQuestionsModal.tsx';
 import TypewriterText from './TypewriterText.tsx';
@@ -149,7 +149,6 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
   const [newQuizName, setNewQuizName] = useState('');
   const [editQuizNameValue, setEditQuizNameValue] = useState('');
   const [showDataManagementSection, setShowDataManagementSection] = useState(true);
-  const [showPatInfoAdmin, setShowPatInfoAdmin] = useState(false);
 
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveStatus, setSaveStatus] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -159,11 +158,12 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
   
-  const [isFetchingPat, setIsFetchingPat] = useState<boolean>(false); // Kept for admin PAT input, not auto-fetcher
+  const [isFetchingPat, setIsFetchingPat] = useState<boolean>(false);
   const [fetchPatStatus, setFetchPatStatus] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // PAT Fetcher from Google Sheets is removed as Battle Royale is removed. Admin PAT is manual.
-  const isPatFetcherConfigured = false; // Effectively disabled
+  const isPatFetcherConfigured = 
+    !!AppConfig.GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL &&
+    AppConfig.GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL !== PLACEHOLDER_APPS_SCRIPT_PAT_URL;
 
   // State for Confirmation Modal
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
@@ -189,14 +189,61 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
   }, [activeAdminQuiz]);
 
 
-  // handleFetchPatFromSheet is removed as it's not used for admin PAT input. Admin PAT is entered manually or from localStorage.
-  // useEffect for automatic PAT fetch on load is also removed for the same reason.
+  const handleFetchPatFromSheet = useCallback(async () => {
+    if (!isPatFetcherConfigured) {
+      setFetchPatStatus({ message: 'PAT fetching URL is not configured. Please check AppConfig.', type: 'error' });
+      return;
+    }
+
+    setIsFetchingPat(true);
+    setFetchPatStatus({ message: 'Fetching PAT...', type: 'info' });
+
+    try {
+      const fetcherUrlString = AppConfig.GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL;
+      const response = await fetch(fetcherUrlString, {
+        method: 'GET',
+      });
+      
+      const responseData = await response.json().catch(async () => {
+        const textError = await response.text();
+        return { error: `Non-JSON response from server: ${textError.substring(0, 150)}...` };
+      });
+
+      if (!response.ok) {
+        const detail = responseData.error || `${response.status} ${response.statusText}`;
+        throw new Error(`Failed to fetch PAT: ${detail}`);
+      }
+
+      if (responseData && typeof responseData.pat === 'string' && responseData.pat.trim() !== '') {
+        setGithubPat(responseData.pat.trim());
+        setFetchPatStatus({ message: 'PAT fetched and updated successfully!', type: 'success' });
+      } else if (responseData.error) { 
+        throw new Error(`Error from source: ${responseData.error}`);
+      }
+      else {
+        throw new Error('Invalid PAT data received. Expected a "pat" field with a non-empty string.');
+      }
+    } catch (error: any) {
+      console.error('Error fetching PAT from sheet:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setFetchPatStatus({ message: `Error fetching PAT: ${errorMessage}`, type: 'error' });
+    } finally {
+      setIsFetchingPat(false);
+    }
+  }, [isPatFetcherConfigured, setFetchPatStatus, setGithubPat]);
+
+
+  useEffect(() => {
+    if (isPatFetcherConfigured) {
+      handleFetchPatFromSheet();
+    }
+  }, [isPatFetcherConfigured, handleFetchPatFromSheet]);
 
 
   const openConfirmationForAction = (title: string, message: React.ReactNode, action: () => void) => {
     setConfirmationTitle(title);
     setConfirmationMessage(message);
-    setConfirmationAction(() => action); // Store the action
+    setConfirmationAction(() => action); 
     setShowConfirmationModal(true);
   };
 
@@ -361,7 +408,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
 
   const handleSaveDataToJson = async () => {
     if (!githubPat) {
-      setSaveStatus({ message: 'A PAT is required to save data.', type: 'error' });
+      setSaveStatus({ message: 'A PAT is required to save data. Please ensure it is fetched successfully.', type: 'error' });
       return;
     }
     if (!isDataSavingConfigured) {
@@ -454,6 +501,21 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
   const toggleSection = (setter: React.Dispatch<React.SetStateAction<boolean>>) => {
     setter(prev => !prev);
   };
+  
+  let fetchButtonIconClass = 'fa-cloud-arrow-down';
+  let fetchButtonText = 'Fetch PAT';
+
+  if (isFetchingPat) {
+    fetchButtonIconClass = 'fa-spinner fa-spin';
+    fetchButtonText = 'Fetching PAT...';
+  } else if (fetchPatStatus?.type === 'success' && githubPat) {
+    fetchButtonIconClass = 'fa-check';
+    fetchButtonText = 'PAT Synced';
+  } else if (fetchPatStatus?.type === 'error') {
+    fetchButtonIconClass = 'fa-rotate-right'; // Or fa-exclamation-triangle
+    fetchButtonText = 'Fetch Failed. Retry?';
+  }
+
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-8">
@@ -734,32 +796,34 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
         {showDataManagementSection && (
           <div className="space-y-4">
             <div>
-              <label className={labelClass}>
-                Personal Access Token (PAT) for Admin
-                 <button
-                    onClick={() => setShowPatInfoAdmin(prev => !prev)}
-                    className="ml-1.5 text-[var(--accent-secondary)] hover:text-[var(--accent-primary)] text-xs focus:outline-none"
-                    aria-label={showPatInfoAdmin ? "Hide PAT information" : "Show PAT information"}
-                    title="Toggle PAT Information"
-                  >
-                    <i className={`fa-solid ${showPatInfoAdmin ? 'fa-eye-slash' : 'fa-eye'}`}></i> Info
-                </button>
-              </label>
-               <input
-                  type="password"
-                  id="adminGithubPat"
-                  value={githubPat}
-                  onChange={(e) => setGithubPat(e.target.value)}
-                  placeholder="Enter GitHub PAT for saving data"
-                  className={`${inputClass} mt-1`}
-                />
-              {showPatInfoAdmin && (
-                <p className="text-xs text-[var(--text-secondary)] mt-1.5">
+                <p className={labelClass}>Personal Access Token (PAT)</p>
+                <p className="text-xs text-[var(--text-secondary)] mt-1 mb-2">
                   Your PAT is stored in browser localStorage. It needs 'repo' scope (Classic PAT) or 'Contents: Read & Write' (Fine-Grained PAT) for the repository containing the application data.
                   <a href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens" target="_blank" rel="noopener noreferrer" className="text-[var(--accent-primary)] hover:underline ml-1">More info</a>
                 </p>
-              )}
             </div>
+            
+            {isPatFetcherConfigured ? (
+              <div className="mt-3">
+                <button
+                  onClick={handleFetchPatFromSheet}
+                  disabled={isFetchingPat || !isPatFetcherConfigured}
+                  className={`${buttonSecondaryClass} w-full sm:w-auto ${isFetchingPat || !isPatFetcherConfigured ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <i className={`fa-solid ${fetchButtonIconClass} fa-fw`}></i>
+                  {fetchButtonText}
+                </button>
+                {fetchPatStatus && (
+                  <p className={`text-xs mt-1.5 text-center ${fetchPatStatus.type === 'error' ? 'text-red-400' : fetchPatStatus.type === 'success' ? 'text-green-400' : 'text-[var(--text-secondary)]'}`}>
+                    {fetchPatStatus.message}
+                  </p>
+                )}
+              </div>
+            ) : (
+                 <p className="text-xs text-[var(--text-secondary)] text-center mt-1 p-2 bg-[var(--input-bg)] border border-[var(--input-border)] rounded-md">
+                    PAT fetching from source is not configured (URL missing or placeholder). Please check app settings.
+                </p>
+            )}
             
             <button
               onClick={handleSaveDataToJson}
@@ -778,7 +842,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
             )}
             {!githubPat && isDataSavingConfigured && (
                  <p className="text-xs text-[var(--text-secondary)] text-center mt-1">
-                    A PAT is required to enable saving. Please enter it above.
+                    A PAT is required to enable saving. Please use the "Fetch PAT" button or ensure automatic fetching is successful.
                 </p>
             )}
 
@@ -794,7 +858,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
                 <div>
                     <h4 className="text-sm font-semibold text-[var(--text-primary)]">Saving Your Work</h4>
                     <p className="text-xs text-[var(--text-secondary)]">
-                        Manage your subjects, quizzes, and questions using the sections above. If data saving is configured, ensure your PAT is entered and click 'Save Data' to store all changes.
+                        Manage your subjects, quizzes, and questions using the sections above. If data saving is configured, ensure your PAT is fetched successfully and click 'Save Data' to store all changes.
                     </p>
                 </div>
               </div>

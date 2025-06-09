@@ -11,22 +11,25 @@
 // If this is a placeholder or empty, the app will try to load './data.json' locally.
 export const PLACEHOLDER_GITHUB_DATA_URL = 'YOUR_GITHUB_RAW_DATA_JSON_URL_HERE_OR_LEAVE_EMPTY_TO_ALWAYS_USE_LOCAL_FALLBACK';
 
-// Removed PLACEHOLDER_APPS_SCRIPT_PAT_URL
-// Removed PLACEHOLDER_APPS_SCRIPT_SECRET
+// For PAT Fetcher:
+// GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL is the endpoint for fetching the PAT.
+// APPS_SCRIPT_SHARED_SECRET is a secret key to authenticate the request to the Apps Script.
+export const PLACEHOLDER_APPS_SCRIPT_PAT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_FOR_PAT_HERE_IF_NOT_USING_DEFAULT'; // Kept for clarity, though AppConfig uses a direct URL
+export const PLACEHOLDER_APPS_SCRIPT_SECRET = 'YOUR_APPS_SCRIPT_SHARED_SECRET_HERE';
 
 
 interface Config {
   GITHUB_DATA_URL: string;
   DEFAULT_THEME: 'light' | 'dark';
-  // Removed GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL
-  // Removed APPS_SCRIPT_SHARED_SECRET
+  GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL: string;
+  APPS_SCRIPT_SHARED_SECRET?: string; // Optional: if not set, PAT fetching from script is disabled
 }
 
 const AppConfig: Config = {
     GITHUB_DATA_URL: 'https://github.com/Rustova/Q/blob/main/data.json',
     DEFAULT_THEME: 'dark',
-    // Removed GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL
-    // Removed APPS_SCRIPT_SHARED_SECRET
+    GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL: 'https://script.google.com/macros/s/AKfycbz-AFYjxhI7KH_IfXAfm1dr5C5XM3D1YKw8AkyljTvDS-dPbKDnYPYMlWnloQTvifDzdw/exec',
+    APPS_SCRIPT_SHARED_SECRET: PLACEHOLDER_APPS_SCRIPT_SECRET, // Replace placeholder or leave to disable feature
 };
 
 export default AppConfig;

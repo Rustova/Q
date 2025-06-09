@@ -56,7 +56,7 @@ const UserView: React.FC<UserViewProps> = ({
   const isMcqOneByOne = currentQuestionOneByOne?.type === 'mcq';
 
   const questionHasBeenAttemptedOneByOne = currentQuestionAnswerObjectOneByOne != null;
-  const questionHasBeenGradedOneByOne = currentQuestionAnswerObjectOneByOne !== null && currentQuestionAnswerObjectOneByOne.feedback !== null;
+  const questionHasBeenGradedOneByOne = !!(currentQuestionAnswerObjectOneByOne && currentQuestionAnswerObjectOneByOne.feedback !== null);
 
   const questionDisplayIsSubmittedOneByOne: boolean = 
     userCorrectionMode === 'immediate' 
@@ -297,7 +297,7 @@ const UserView: React.FC<UserViewProps> = ({
             {quiz.questions.map((question, index) => {
                 const answerObject = userAnswers[index];
                 const hasBeenAttempted = answerObject != null;
-                const hasBeenGraded = answerObject !== null && answerObject.feedback !== null;
+                const hasBeenGraded = !!(answerObject && answerObject.feedback !== null) ;
                 const displayIsSubmitted = userCorrectionMode === 'immediate' ? hasBeenGraded : isQuizComplete;
                 const selectedOptId = hasBeenAttempted ? answerObject.selectedOptionId : null;
                 const correctOptId = (userCorrectionMode === 'immediate' || isQuizComplete) && hasBeenGraded && question.type === 'mcq'

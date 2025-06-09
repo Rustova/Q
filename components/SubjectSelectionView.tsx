@@ -157,7 +157,7 @@ const SubjectSelectionView: React.FC<SubjectSelectionViewProps> = ({
         button.style.zIndex = '1000';
         button.style.transformOrigin = 'center center';
         
-        button.style.transform = `translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(2.5)`;
+        button.style.transform = `translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(1.5)`;
         button.style.overflow = 'hidden'; 
         
         void button.offsetWidth; 
@@ -202,8 +202,7 @@ const SubjectSelectionView: React.FC<SubjectSelectionViewProps> = ({
         button.style.transform = ''; 
         
         onAnimationComplete(); // Notify App.tsx that animation is done
-        // Reset local state to 'idle' to allow re-triggering if playAnimation becomes true again
-        // setPdfButtonAnimationState('idle'); // No, let App.tsx control the trigger. If it becomes true again, effect re-runs.
+        setPdfButtonAnimationState('idle'); // Reset local animation state
     }
 
     return () => {
