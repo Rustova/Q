@@ -1,4 +1,17 @@
 {
-  "lastUpdated": "2025-06-09T13:57:03.206Z",
-  "subjects": []
+  "lastUpdated": "2025-06-09T14:36:13.063Z",
+  "subjects": [
+    {
+      "id": "mbp70vebyi8mlnb6o",
+      "name": "باطنة",
+      "quizzes": [
+        {
+          "id": "mbp713xx00uxbo3ft",
+          "name": "Lecture 1",
+          "questions": [],
+          "isStartable": true
+        }
+      ]
+    }
+  ]
 }
