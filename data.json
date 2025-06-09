@@ -1,4 +1,47 @@
 {
-  "lastUpdated": "2024-07-30T12:00:00.000Z",
-  "subjects": []
+  "lastUpdated": "2025-06-09T16:12:27.792Z",
+  "subjects": [
+    {
+      "id": "mbpahr1cdp7bj8m37",
+      "name": "باطنة",
+      "quizzes": [
+        {
+          "id": "mbpahyfeywuhn2ovc",
+          "name": "Lecture 1",
+          "questions": [
+            {
+              "questionText": "your name ?",
+              "type": "written",
+              "id": "mbpai5msstvb9o4uk"
+            },
+            {
+              "questionText": "How old are you?",
+              "type": "mcq",
+              "options": [
+                {
+                  "id": "option-mbpairrtcb08pvirz-0",
+                  "text": "20"
+                },
+                {
+                  "id": "option-mbpairrt03f6v7hma-1",
+                  "text": "5"
+                },
+                {
+                  "id": "option-mbpairrtuhwjf5suk-2",
+                  "text": "30"
+                },
+                {
+                  "id": "option-mbpairrttxx91hn3u-3",
+                  "text": "35"
+                }
+              ],
+              "correctOptionId": "option-mbpairrtcb08pvirz-0",
+              "id": "mbpairrtz3pfcbamp"
+            }
+          ],
+          "isStartable": true
+        }
+      ]
+    }
+  ]
 }
