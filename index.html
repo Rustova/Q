@@ -4,10 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>test</title>
+  <title>Q</title>
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -230,6 +230,7 @@
     .animate-settings-init {
       display: inline-block; /* Ensures transform works correctly */
       animation: spinAndHighlight 1.2s ease-in-out;
+      transform-origin: center; /* Ensures rotation is around the icon's center */
     }
 
     /* PDF Button Multi-Stage Animation Classes & Keyframes */
@@ -248,13 +249,13 @@
         transform: translate(0px, 0px) scale(1);
       }
       to {
-        transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(2.5);
+        transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(1.5);
       }
     }
 
     .pdf-button-shining {
       /* JS sets: position:fixed, top, left, width, height (from initial), 
-                  transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(2.5), 
+                  transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(1.5),
                   z-index, overflow:hidden, transform-origin */
     }
 
@@ -285,19 +286,34 @@
 
     .pdf-button-returning {
       /* JS ensures button is position:fixed, width/height from initial, transform-origin.
-         Current transform is translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(2.5). */
+         Current transform is translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(1.5). */
       animation: shrinkAndReturnAnimation 0.6s ease-in forwards;
     }
 
     @keyframes shrinkAndReturnAnimation {
       from {
-        transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(2.5);
+        transform: translate(var(--translate-to-center-x), var(--translate-to-center-y)) scale(1.5);
         opacity: 1;
       }
       to {
         transform: translate(0px, 0px) scale(1);
         opacity: 1;
       }
+    }
+
+    /* PDF Animation Overlay */
+    .pdf-animation-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.6); /* Darker overlay */
+      z-index: 900; /* Below animating button (1000), above other content */
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      pointer-events: none; /* Allow interaction when not visible */
+    }
+    .pdf-animation-overlay.visible {
+      opacity: 1;
+      pointer-events: auto; /* Block interaction when visible */
     }
 
   </style>
@@ -314,21 +330,7 @@
   }
 }
 </script>
-  <script type="module" crossorigin src="/Q/assets/index-DXmLj41y.js"></script>
-  <link rel="modulepreload" crossorigin href="/Q/assets/core-js--yVVgAJ6.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/react-ZpOpdbvF.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/scheduler-SPyfQU6S.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/react-dom-BFJMa1Yr.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/@babel-CpGVvVoG.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/fflate-BO5HMHBV.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/jspdf-BVD6OXYK.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/redux-CqoN-cwI.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/use-sync-external-store-DGADeII1.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/react-redux-DzurNSeR.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/tiny-invariant-BaFNuDhB.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/css-box-model-SSI6wf-B.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/raf-schd-CmoV45_-.js">
-  <link rel="modulepreload" crossorigin href="/Q/assets/@hello-pangea-BHoMb5q8.js">
+  <script type="module" crossorigin src="/assets/index-CMO1mvLH.js"></script>
 </head>
 <body class="custom-scrollbar" oncontextmenu="return false;">
   <div id="app-root">
@@ -336,6 +338,6 @@
   </div>
   <div id="modal-root"></div> <!-- Portal for modals -->
   <div id="user-auth-modal-root"></div> <!-- Portal for user auth modal -->
-  <audio id="shine-sound" src="/Q/assets/shine-UdD7jAQc.wav" preload="auto"></audio>
+  <audio id="shine-sound" src="/assets/shine-UdD7jAQc.wav" preload="auto"></audio>
 </body>
 </html>
