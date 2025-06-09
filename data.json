@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2025-06-09T16:15:07.570Z",
+  "lastUpdated": "2025-06-09T19:00:58.545Z",
   "subjects": [
     {
       "id": "mbpahr1cdp7bj8m37",
@@ -51,6 +51,31 @@
     {
       "id": "mbpamalnl2vri67y2",
       "name": "طب شرعي",
+      "quizzes": []
+    },
+    {
+      "id": "mbpgiw2imn8u19bvp",
+      "name": "H",
+      "quizzes": []
+    },
+    {
+      "id": "mbpgj4ikau9dylz7v",
+      "name": "A",
+      "quizzes": []
+    },
+    {
+      "id": "mbpgjb52hgbrcsn3n",
+      "name": "Z",
+      "quizzes": []
+    },
+    {
+      "id": "mbpgjf1d4rgjn23yn",
+      "name": "E",
+      "quizzes": []
+    },
+    {
+      "id": "mbpgjkfli2d083aje",
+      "name": "M",
       "quizzes": []
     }
   ]
