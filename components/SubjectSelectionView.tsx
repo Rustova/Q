@@ -7,8 +7,9 @@ import PdfPreferencesModal from './PdfPreferencesModal.tsx';
 interface SubjectSelectionViewProps {
   subjects: Subject[];
   onSelectSubject: (subjectId: string) => void;
-  playAnimation: boolean;
   onAnimationComplete: () => void;
+  hasPdfButtonAnimationPlayedOnceGlobal: boolean;
+  userHasInteractedWithWelcome: boolean; // New prop
 }
 
 const FADE_IN_UP_DURATION_MS = 500; // Duration of the .animate-fadeInUp animation
@@ -16,8 +17,9 @@ const FADE_IN_UP_DURATION_MS = 500; // Duration of the .animate-fadeInUp animati
 const SubjectSelectionView: React.FC<SubjectSelectionViewProps> = ({ 
   subjects, 
   onSelectSubject,
-  playAnimation,
   onAnimationComplete,
+  hasPdfButtonAnimationPlayedOnceGlobal,
+  userHasInteractedWithWelcome, // Use this prop
 }) => {
   const FEW_SUBJECTS_THRESHOLD = 4; 
   const baseDelay = 0.1; 
@@ -66,7 +68,6 @@ const SubjectSelectionView: React.FC<SubjectSelectionViewProps> = ({
   // Effect to capture initial button geometry once its container is stable
   useEffect(() => {
     if (pdfButtonRef.current && !initialButtonRectRef.current && subjects.length > 0 && !isInitialRectCaptured) {
-        // Increased buffer from 100ms to 300ms for more stability before capture
         const delayForCapture = (calculatedPdfButtonContainerDelay * 1000) + FADE_IN_UP_DURATION_MS + 300; 
         const timer = setTimeout(() => {
             if (pdfButtonRef.current) {
@@ -76,7 +77,6 @@ const SubjectSelectionView: React.FC<SubjectSelectionViewProps> = ({
         }, delayForCapture);
         return () => clearTimeout(timer);
     }
-     // Reset if subjects become empty, allowing re-capture if they populate again
      if (subjects.length === 0 && isInitialRectCaptured) {
         setIsInitialRectCaptured(false);
         initialButtonRectRef.current = null;
@@ -93,14 +93,16 @@ const SubjectSelectionView: React.FC<SubjectSelectionViewProps> = ({
   }, []);
 
 
-  // Main animation sequence controller
+  // Main animation sequence controller - auto-starts if conditions met
   useEffect(() => {
-    // Entry condition for starting the animation sequence
-    if (playAnimation && pdfButtonAnimationState === 'idle' && isInitialRectCaptured && subjects.length > 0 && pdfButtonRef.current) {
-        if (pdfButtonRef.current) { 
-            setPdfButtonAnimationState('growing');
-        }
-        // No explicit timer here, animation starts based on prop change
+    // Entry condition for starting the animation sequence automatically
+    if (!hasPdfButtonAnimationPlayedOnceGlobal && 
+        userHasInteractedWithWelcome && // <<< Use new prop here
+        pdfButtonAnimationState === 'idle' && 
+        isInitialRectCaptured && 
+        subjects.length > 0 && 
+        pdfButtonRef.current) {
+      setPdfButtonAnimationState('growing');
     }
 
     const button = pdfButtonRef.current;
@@ -108,16 +110,15 @@ const SubjectSelectionView: React.FC<SubjectSelectionViewProps> = ({
 
     const initialRect = initialButtonRectRef.current;
     if (!initialRect && ['growing', 'shining', 'returning'].includes(pdfButtonAnimationState)) {
-        console.error("Animation stage attempted without initial rect. Resetting.");
+        console.error("Animation stage attempted without initial rect. Resetting animation state.");
         setPdfButtonAnimationState('idle');
-        setIsInitialRectCaptured(false); // Reset to allow re-capture
-        if(playAnimation) onAnimationComplete(); // Reset trigger in App.tsx if it was active
+        setIsInitialRectCaptured(false); 
         return;
     }
 
+
     let stageTimer: number;
 
-    // Clear previous animation classes
     button.classList.remove('pdf-button-growing', 'pdf-button-shining', 'pdf-button-returning');
     
     const translateX = initialRect ? (window.innerWidth / 2) - (initialRect.left + initialRect.width / 2) : 0;
@@ -201,15 +202,25 @@ const SubjectSelectionView: React.FC<SubjectSelectionViewProps> = ({
         button.style.removeProperty('--translate-to-center-y');
         button.style.transform = ''; 
         
-        onAnimationComplete(); // Notify App.tsx that animation is done
-        setPdfButtonAnimationState('idle'); // Reset local animation state
+        onAnimationComplete(); 
+        setPdfButtonAnimationState('idle'); 
     }
 
     return () => {
         window.clearTimeout(stageTimer);
     };
-  }, [playAnimation, pdfButtonAnimationState, isInitialRectCaptured, subjects.length, onAnimationComplete]);
+  }, [
+      hasPdfButtonAnimationPlayedOnceGlobal, 
+      userHasInteractedWithWelcome, // Add to dependency array
+      pdfButtonAnimationState, 
+      isInitialRectCaptured, 
+      subjects.length, 
+      onAnimationComplete
+    ]);
 
+
+  // Removed the useEffect that listened for body click/keydown to trigger animation,
+  // as WelcomeScreen now handles the initial interaction.
 
   return (
     <>

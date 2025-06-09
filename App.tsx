@@ -11,6 +11,7 @@ import AdminView from './components/AdminView.tsx';
 import TimestampModal from './components/TimestampModal.tsx';
 import QuizPreferencesModal from './components/QuizPreferencesModal.tsx'; // New Modal
 import AppConfig, { PLACEHOLDER_GITHUB_DATA_URL } from './config.ts';
+import WelcomeScreen from './components/WelcomeScreen.tsx'; // Import WelcomeScreen
 
 // --- Constants ---
 const ADMIN_PASSWORD = "e2c841f407";
@@ -148,10 +149,15 @@ const App: React.FC = () => {
   const [showManageSubjectsSection, setShowManageSubjectsSection] = useState(true);
   const [showManageQuizzesSection, setShowManageQuizzesSection] = useState(true);
 
-  const [isPdfAnimationActive, setIsPdfAnimationActive] = useState<boolean>(false);
   const [hasPdfButtonAnimationPlayedOnce, setHasPdfButtonAnimationPlayedOnce] = useState<boolean>(() => {
     return localStorage.getItem('pdfButtonAnimationPlayedOnce') === 'true';
   });
+
+  // Welcome Screen State
+  const [showWelcomeScreen, setShowWelcomeScreen] = useState(() => !localStorage.getItem('pdfButtonAnimationPlayedOnce'));
+  const [userHasInteractedWithWelcome, setUserHasInteractedWithWelcome] = useState(
+    () => !!localStorage.getItem('pdfButtonAnimationPlayedOnce')
+  );
 
 
   const fetchAttemptedRef = useRef(false);
@@ -316,7 +322,6 @@ const App: React.FC = () => {
     setSelectedSubjectForUser(null);
     setSelectedQuizForUser(null);
     resetUserQuizState();
-    setIsPdfAnimationActive(false);
 
     if (isAdminAuthenticated) { 
         localStorage.setItem('wasAdminViewBeforeRefresh', 'true');
@@ -331,7 +336,6 @@ const App: React.FC = () => {
     setActiveSubjectIdForAdminState(null);
     setActiveQuizIdForAdminState(null);
     setEditingQuestion(null);
-    setIsPdfAnimationActive(false); 
   };
 
 
@@ -356,7 +360,6 @@ const App: React.FC = () => {
     setActiveSubjectIdForAdminState(null);
     setActiveQuizIdForAdminState(null);
     setEditingQuestion(null);
-    setIsPdfAnimationActive(false);
   };
 
   const handleCloseAdminLoginModal = () => {
@@ -365,7 +368,6 @@ const App: React.FC = () => {
     if (!isAdminAuthenticated) {
       setCurrentAppView('SubjectSelection');
       localStorage.removeItem('wasAdminViewBeforeRefresh');
-      setIsPdfAnimationActive(false);
     }
   };
 
@@ -636,7 +638,6 @@ const App: React.FC = () => {
     setSelectedQuizForUser(null); 
     resetUserQuizState();
     setCurrentAppView('QuizSelection');
-    setIsPdfAnimationActive(false); // Don't play when going forward
   };
 
   const handleSelectQuizForUser = (quizId: string) => {
@@ -654,9 +655,6 @@ const App: React.FC = () => {
     setSelectedQuizForUser(null);
     resetUserQuizState();
     setCurrentAppView('SubjectSelection');
-    if (!hasPdfButtonAnimationPlayedOnce) {
-        setIsPdfAnimationActive(true); // Trigger animation on return only if it hasn't played globally
-    }
   };
 
   const handleBackToQuizListFromUserView = () => {
@@ -808,12 +806,19 @@ const App: React.FC = () => {
   };
 
   const handlePdfAnimationComplete = () => {
-    setIsPdfAnimationActive(false);
     if (!hasPdfButtonAnimationPlayedOnce) {
       setHasPdfButtonAnimationPlayedOnce(true);
       localStorage.setItem('pdfButtonAnimationPlayedOnce', 'true');
     }
   };
+
+  const handleWelcomeInteraction = () => {
+    setShowWelcomeScreen(false);
+    setUserHasInteractedWithWelcome(true);
+    // SubjectSelectionView will now check userHasInteractedWithWelcome
+    // and potentially start its PDF button animation.
+  };
+  
 
   const activeAdminSubject = subjects.find(s => s.id === activeSubjectIdForAdmin);
   const activeAdminQuiz = activeAdminSubject?.quizzes.find(q => q.id === activeQuizIdForAdmin);
@@ -906,11 +911,13 @@ const App: React.FC = () => {
             />
           );
         }
+        // Fall through to SubjectSelection if not admin authenticated for AdminPanel
         return <SubjectSelectionView 
                   subjects={subjects} 
                   onSelectSubject={handleSelectSubjectForUser} 
-                  playAnimation={isPdfAnimationActive && !hasPdfButtonAnimationPlayedOnce}
                   onAnimationComplete={handlePdfAnimationComplete}
+                  hasPdfButtonAnimationPlayedOnceGlobal={hasPdfButtonAnimationPlayedOnce}
+                  userHasInteractedWithWelcome={userHasInteractedWithWelcome}
                 />;
       
       case 'UserQuiz':
@@ -956,8 +963,9 @@ const App: React.FC = () => {
         return <SubjectSelectionView 
                 subjects={subjects} 
                 onSelectSubject={handleSelectSubjectForUser} 
-                playAnimation={isPdfAnimationActive && !hasPdfButtonAnimationPlayedOnce}
                 onAnimationComplete={handlePdfAnimationComplete}
+                hasPdfButtonAnimationPlayedOnceGlobal={hasPdfButtonAnimationPlayedOnce}
+                userHasInteractedWithWelcome={userHasInteractedWithWelcome}
               />;
     }
   };
@@ -965,21 +973,26 @@ const App: React.FC = () => {
 
   return (
     <>
-      <Header 
-        contextTitle={contextTitle} 
-        isAdminView={isAdminPanelActive}
-        isAdminAuthenticated={isAdminAuthenticated}
-        currentAppViewMode={currentAppView}
-        onSwitchToAdminView={handleSwitchToAdminView}
-        onSwitchToUserView={handleSwitchToUserView}
-        onAdminLogout={handleAdminLogout}
-        dataTimestamp={dataTimestamp}
-        onShowTimestampModal={handleToggleTimestampModal}
-      />
-      <main className={mainContentClasses}>
-        {renderCurrentView()}
-      </main>
-      <Footer appName={APP_NAME} />
+      {showWelcomeScreen && <WelcomeScreen onInteraction={handleWelcomeInteraction} />}
+      {!showWelcomeScreen && (
+        <>
+          <Header 
+            contextTitle={contextTitle} 
+            isAdminView={isAdminPanelActive}
+            isAdminAuthenticated={isAdminAuthenticated}
+            currentAppViewMode={currentAppView}
+            onSwitchToAdminView={handleSwitchToAdminView}
+            onSwitchToUserView={handleSwitchToUserView}
+            onAdminLogout={handleAdminLogout}
+            dataTimestamp={dataTimestamp}
+            onShowTimestampModal={handleToggleTimestampModal}
+          />
+          <main className={mainContentClasses}>
+            {renderCurrentView()}
+          </main
+          <Footer appName={APP_NAME} />
+        </>
+      )}
       {showAdminLoginModal && (
         <AdminLoginModal
           onLogin={handleAdminLogin}
@@ -1005,8 +1018,10 @@ const App: React.FC = () => {
         />
       )}
       <div 
-        className={`pdf-animation-overlay ${isPdfAnimationActive && !hasPdfButtonAnimationPlayedOnce ? 'visible' : ''}`}
-        aria-hidden={!(isPdfAnimationActive && !hasPdfButtonAnimationPlayedOnce)}
+        className={`pdf-animation-overlay ${
+          (currentAppView === 'SubjectSelection' && !hasPdfButtonAnimationPlayedOnce) ? 'visible' : ''
+        }`}
+        aria-hidden={!(currentAppView === 'SubjectSelection' && !hasPdfButtonAnimationPlayedOnce)}
       ></div>
     </>
   );
