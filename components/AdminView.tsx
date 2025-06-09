@@ -6,7 +6,7 @@ import QuestionForm from './QuestionForm.tsx';
 import AdminQuestionListItem from './AdminQuestionListItem.tsx';
 import HoldToDeleteButton from './HoldToDeleteButton.tsx'; // Re-enabled
 import ConfirmationModal from './ConfirmationModal.tsx'; 
-import AppConfig, { PLACEHOLDER_GITHUB_DATA_URL, PLACEHOLDER_APPS_SCRIPT_PAT_URL, PLACEHOLDER_APPS_SCRIPT_SECRET } from '../config.ts';
+import AppConfig, { PLACEHOLDER_GITHUB_DATA_URL } from '../config.ts'; // Removed PAT placeholders
 import EditQuestionModal from './EditQuestionModal.tsx';
 import ReorderQuestionsModal from './ReorderQuestionsModal.tsx';
 import TypewriterText from './TypewriterText.tsx';
@@ -119,6 +119,7 @@ interface AdminViewProps {
   onUpdateQuestion: (subjectId: string, quizId: string, question: Question) => void;
   onDeleteQuestion: (subjectId: string, quizId: string, questionId: string) => void;
   onReorderQuestions: (subjectId: string, quizId: string, newQuestions: Question[]) => void;
+  onReorderAllQuizzesByTypeGlobal: () => void;
   maxOptions: number;
   showManageSubjectsSection: boolean;
   setShowManageSubjectsSection: (show: boolean) => void;
@@ -135,7 +136,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
     subjects, allSubjectsData, activeSubjectId, activeQuizId, editingQuestion, setEditingQuestion,
     onSetActiveSubjectId, onCreateSubject, onUpdateSubjectName, onDeleteSubject,
     onSetActiveQuizId, onCreateQuiz, onUpdateQuizName, onDeleteQuiz, onToggleQuizStartable,
-    onAddQuestion, onUpdateQuestion, onDeleteQuestion, onReorderQuestions,
+    onAddQuestion, onUpdateQuestion, onDeleteQuestion, onReorderQuestions, onReorderAllQuizzesByTypeGlobal,
     maxOptions,
     showManageSubjectsSection, setShowManageSubjectsSection,
     showManageQuizzesSection, setShowManageQuizzesSection,
@@ -158,13 +159,11 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
   
-  const [isFetchingPat, setIsFetchingPat] = useState<boolean>(false);
+  const [isFetchingPat, setIsFetchingPat] = useState<boolean>(false); // Kept for admin PAT input, not auto-fetcher
   const [fetchPatStatus, setFetchPatStatus] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  const isPatFetcherConfigured = AppConfig.GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL &&
-                                AppConfig.GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL !== PLACEHOLDER_APPS_SCRIPT_PAT_URL &&
-                                AppConfig.APPS_SCRIPT_SHARED_SECRET &&
-                                AppConfig.APPS_SCRIPT_SHARED_SECRET !== PLACEHOLDER_APPS_SCRIPT_SECRET;
+  // PAT Fetcher from Google Sheets is removed as Battle Royale is removed. Admin PAT is manual.
+  const isPatFetcherConfigured = false; // Effectively disabled
 
   // State for Confirmation Modal
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
@@ -190,73 +189,11 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
   }, [activeAdminQuiz]);
 
 
-  const handleFetchPatFromSheet = useCallback(async (isAutoAttempt = false) => {
-    if (!isPatFetcherConfigured) {
-      if (!isAutoAttempt) {
-          setFetchPatStatus({ message: 'PAT Fetcher not configured. Please check application settings.', type: 'error'});
-      } else {
-          console.info("PAT Fetcher not configured, skipping automatic fetch.");
-      }
-      return;
-    }
-    setIsFetchingPat(true);
-    setFetchPatStatus({ message: 'Fetching PAT...', type: 'info' });
-    try {
-      const fetchUrl = `${AppConfig.GOOGLE_APPS_SCRIPT_PAT_FETCHER_URL}?secret=${encodeURIComponent(AppConfig.APPS_SCRIPT_SHARED_SECRET)}&_cb_pat=${Date.now()}`;
-      const response = await fetch(fetchUrl, { mode: 'cors' });
+  // handleFetchPatFromSheet is removed as it's not used for admin PAT input. Admin PAT is entered manually or from localStorage.
+  // useEffect for automatic PAT fetch on load is also removed for the same reason.
 
-      if (!response.ok) {
-        let errorMsg = `Error fetching PAT: ${response.status} ${response.statusText}`;
-        try {
-            const errorData = await response.json(); 
-            errorMsg = errorData.error || errorMsg;
-        } catch (e) { 
-            try {
-                const textError = await response.text();
-                errorMsg += ` - Response: ${textError.substring(0, 100)}`; 
-            } catch (textErr) { /* Ignore */ }
-        }
-        console.error("Raw error from PAT fetcher:", errorMsg);
-        throw new Error("Could not retrieve PAT. Ensure the PAT fetcher is configured and network is stable. You can try fetching again.");
-      }
 
-      const data = await response.json();
-      if (data.error) {
-        console.error("Error from PAT fetcher script:", data.error);
-        throw new Error("Could not retrieve PAT. Ensure the PAT fetcher is configured and network is stable. You can try fetching again.");
-      }
-
-      let patValue: string | undefined = undefined;
-      if (data.pat && typeof data.pat === 'string') {
-        patValue = data.pat;
-      } else if (data.valueFromA1 && typeof data.valueFromA1 === 'string') { 
-        patValue = data.valueFromA1;
-        console.warn("Fetched PAT using fallback key 'valueFromA1'. Recommended key is 'pat'.");
-      }
-
-      if (patValue) {
-        setGithubPat(patValue);
-        setFetchPatStatus({ message: 'PAT retrieved.', type: 'success' });
-      } else {
-        console.error("Raw data received from PAT fetcher that was not in the expected format:", data); 
-        throw new Error('Could not retrieve PAT. Ensure the PAT fetcher is configured and network is stable. You can try fetching again.');
-      }
-    } catch (error: any) {
-      console.error("Error during PAT fetch process:", error);
-      setFetchPatStatus({ message: error.message || "Could not retrieve PAT. An unknown error occurred.", type: 'error' });
-    } finally {
-      setIsFetchingPat(false);
-    }
-  }, [isPatFetcherConfigured, setGithubPat]);
-
-  useEffect(() => {
-    if (isPatFetcherConfigured && !githubPat) {
-      console.log("AdminView: Attempting automatic PAT fetch on load.");
-      handleFetchPatFromSheet(true); 
-    }
-  }, [isPatFetcherConfigured, githubPat, handleFetchPatFromSheet]);
-
-  const openConfirmationForSubject = (title: string, message: React.ReactNode, action: () => void) => {
+  const openConfirmationForAction = (title: string, message: React.ReactNode, action: () => void) => {
     setConfirmationTitle(title);
     setConfirmationMessage(message);
     setConfirmationAction(() => action); // Store the action
@@ -286,7 +223,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
         alert(`A subject with the name "${newSubjectName.trim()}" already exists. Please choose a different name.`);
         return;
     }
-    openConfirmationForSubject(
+    openConfirmationForAction(
         "Confirm Create Subject",
         <p>Are you sure you want to create the subject: <strong>{newSubjectName.trim()}</strong>?</p>,
         () => {
@@ -306,7 +243,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
       return;
     }
     const currentSubjectName = activeAdminSubject?.name;
-    openConfirmationForSubject(
+    openConfirmationForAction(
         "Confirm Update Subject Name",
         <p>Are you sure you want to rename the subject from "<strong>{currentSubjectName}</strong>" to "<strong>{editSubjectNameValue.trim()}</strong>"?</p>,
         () => {
@@ -319,7 +256,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
 
   const handleDeleteSelectedSubject = () => {
     if (activeSubjectId && activeAdminSubject) {
-      openConfirmationForSubject(
+      openConfirmationForAction(
           "Confirm Delete Subject",
           <p>Are you sure you want to delete the subject: <strong>{activeAdminSubject.name}</strong>? This action cannot be undone and will delete all its quizzes and questions.</p>,
           () => onDeleteSubject(activeSubjectId)
@@ -357,7 +294,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
   const handleDeleteSelectedQuiz = () => {
     if (activeSubjectId && activeQuizId && activeAdminQuiz) {
       // Direct action, to be replaced by HoldToDeleteButton logic
-      onDeleteQuiz(activeSubjectId, activeQuizId);
+      onDeleteQuiz(activeSubjectId!, activeQuizId!);
     } else {
       alert('No quiz selected to delete.');
     }
@@ -409,6 +346,16 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
         onReorderQuestions(activeSubjectId, activeQuizId, reorderedQuestions);
     }
     setIsReorderModalOpen(false);
+  };
+
+  const handleRequestGlobalReorderByType = () => {
+    openConfirmationForAction(
+      "Confirm Global Question Reorder",
+      <span>This will reorder questions in <strong>ALL quizzes</strong> across <strong>ALL subjects</strong>. Written questions will be moved before MCQ questions within each quiz. This action cannot be undone. Please enter the password to confirm.</span>,
+      () => {
+        onReorderAllQuizzesByTypeGlobal();
+      }
+    );
   };
 
 
@@ -668,7 +615,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
                       </button>
                     </div>
                     <HoldToDeleteButton
-                        onConfirm={() => onDeleteQuiz(activeSubjectId!, activeQuizId!)}
+                        onConfirm={() => handleDeleteSelectedQuiz()}
                         label="Delete Quiz"
                         holdTimeMs={3000}
                     />
@@ -689,9 +636,13 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
       {/* Manage Questions Section */}
       {activeSubjectId && activeQuizId && activeAdminQuiz && (
         <section className={`${sectionBaseClass} mt-6`} aria-labelledby="manage-questions-heading">
-          <h2 id="manage-questions-heading" className="text-xl sm:text-2xl font-semibold text-[var(--accent-primary)] mb-4">
-            Manage Questions for: <span className="truncate">{activeAdminQuiz.name}</span>
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 id="manage-questions-heading" className="text-xl sm:text-2xl font-semibold text-[var(--accent-primary)]">
+              Manage Questions for: <span className="truncate">{activeAdminQuiz.name}</span>
+            </h2>
+            {/* Action buttons for question list are now part of the H3 below */}
+          </div>
+
 
           <QuestionForm
               subjectId={activeSubjectId}
@@ -716,18 +667,34 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
           )}
 
           <div className="mt-6">
-            <h3 className="text-lg font-medium text-[var(--text-primary)] mb-3">
-                Current Questions ({activeAdminQuiz.questions.length})
-                {activeAdminQuiz.questions.length > 1 && (
-                     <button
-                        onClick={handleOpenReorderModal}
-                        className="ml-3 px-2.5 py-1 text-xs bg-[var(--btn-secondary-bg)] hover:bg-[var(--btn-secondary-hover-bg)] text-[var(--btn-secondary-text)] rounded-md transition-colors"
-                        aria-label="Reorder questions"
-                    >
-                        <i className="fa-solid fa-sort mr-1"></i> Reorder
-                    </button>
-                )}
-            </h3>
+            <div className="flex flex-wrap gap-2 justify-between items-center mb-3">
+                <h3 className="text-lg font-medium text-[var(--text-primary)]">
+                    Current Questions ({activeAdminQuiz.questions.length})
+                </h3>
+                <div className="flex gap-2">
+                    {activeAdminQuiz.questions.length > 0 && (
+                        <button
+                            onClick={handleRequestGlobalReorderByType}
+                            className="px-2.5 py-1 text-xs bg-[var(--btn-secondary-bg)] hover:bg-[var(--btn-secondary-hover-bg)] text-[var(--btn-secondary-text)] rounded-md transition-colors flex items-center space-x-1"
+                            aria-label="Sort all questions globally by type (Written then MCQ)"
+                            title="Sort All Quizzes by Type (Global)"
+                        >
+                            <i className="fa-solid fa-arrow-up-wide-short"></i>
+                            <span>Sort All by Type (Global)</span>
+                        </button>
+                    )}
+                    {activeAdminQuiz.questions.length > 1 && (
+                         <button
+                            onClick={handleOpenReorderModal}
+                            className="px-2.5 py-1 text-xs bg-[var(--btn-secondary-bg)] hover:bg-[var(--btn-secondary-hover-bg)] text-[var(--btn-secondary-text)] rounded-md transition-colors flex items-center space-x-1"
+                            aria-label="Reorder questions for current quiz"
+                            title="Reorder Questions (Current Quiz)"
+                        >
+                            <i className="fa-solid fa-sort"></i> <span>Reorder</span>
+                        </button>
+                    )}
+                </div>
+            </div>
             {activeAdminQuiz.questions.length === 0 ? (
               <p className="text-[var(--text-secondary)] text-center py-3">No questions added yet. Use the form above to add some!</p>
             ) : (
@@ -768,7 +735,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
           <div className="space-y-4">
             <div>
               <label className={labelClass}>
-                Personal Access Token (PAT)
+                Personal Access Token (PAT) for Admin
                  <button
                     onClick={() => setShowPatInfoAdmin(prev => !prev)}
                     className="ml-1.5 text-[var(--accent-secondary)] hover:text-[var(--accent-primary)] text-xs focus:outline-none"
@@ -778,21 +745,14 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
                     <i className={`fa-solid ${showPatInfoAdmin ? 'fa-eye-slash' : 'fa-eye'}`}></i> Info
                 </button>
               </label>
-              <div className="mt-1"> 
-                {!isPatFetcherConfigured && (
-                     <p className="text-xs text-[var(--text-secondary)]">PAT Fetcher not configured.</p>
-                )}
-                {fetchPatStatus && (
-                  <p className={`text-xs whitespace-pre-wrap ${fetchPatStatus.type === 'error' ? 'text-red-400' : fetchPatStatus.type === 'success' ? 'text-green-400' : 'text-[var(--text-secondary)]'}`}>
-                      {fetchPatStatus.message}
-                  </p>
-                )}
-                {isPatFetcherConfigured && isFetchingPat && !fetchPatStatus && (
-                    <p className="text-xs text-[var(--text-secondary)]">
-                        <i className="fa-solid fa-spinner fa-spin fa-fw mr-1"></i>Attempting to retrieve PAT...
-                    </p>
-                )}
-              </div>
+               <input
+                  type="password"
+                  id="adminGithubPat"
+                  value={githubPat}
+                  onChange={(e) => setGithubPat(e.target.value)}
+                  placeholder="Enter GitHub PAT for saving data"
+                  className={`${inputClass} mt-1`}
+                />
               {showPatInfoAdmin && (
                 <p className="text-xs text-[var(--text-secondary)] mt-1.5">
                   Your PAT is stored in browser localStorage. It needs 'repo' scope (Classic PAT) or 'Contents: Read & Write' (Fine-Grained PAT) for the repository containing the application data.
@@ -818,7 +778,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
             )}
             {!githubPat && isDataSavingConfigured && (
                  <p className="text-xs text-[var(--text-secondary)] text-center mt-1">
-                    A PAT is required to enable saving. Please ensure it's correctly configured and fetched.
+                    A PAT is required to enable saving. Please enter it above.
                 </p>
             )}
 
@@ -834,7 +794,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
                 <div>
                     <h4 className="text-sm font-semibold text-[var(--text-primary)]">Saving Your Work</h4>
                     <p className="text-xs text-[var(--text-secondary)]">
-                        Manage your subjects, quizzes, and questions using the sections above. If data saving is configured, ensure your PAT is fetched and click 'Save Data' to store all changes.
+                        Manage your subjects, quizzes, and questions using the sections above. If data saving is configured, ensure your PAT is entered and click 'Save Data' to store all changes.
                     </p>
                 </div>
               </div>
@@ -849,7 +809,7 @@ const AdminView: React.FC<AdminViewProps> = (props) => {
           isOpen={showConfirmationModal}
           title={confirmationTitle}
           message={confirmationMessage}
-          requiredPassword={ADMIN_ACTION_PASSWORD} // This will always be the subject password when this modal is shown
+          requiredPassword={ADMIN_ACTION_PASSWORD} 
           onConfirm={handleConfirmAction}
           onCancel={handleCancelConfirmation}
         />

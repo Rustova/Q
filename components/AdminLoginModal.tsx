@@ -41,7 +41,7 @@ const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ onLogin, onClose, err
               className="w-full p-3 border border-[var(--input-border)] rounded-md bg-[var(--input-bg)] text-[var(--input-text)] focus:ring-2 focus:ring-[var(--input-focus-ring)] focus:border-[var(--input-focus-ring)] placeholder-[var(--placeholder-color)]"
               placeholder="Enter admin password"
               required
-              autoFocus
+              // autoFocus removed
             />
           </div>
           {error && <p className="text-red-500 text-sm text-center -mt-2">{error}</p>}

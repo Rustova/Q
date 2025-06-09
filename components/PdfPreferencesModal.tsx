@@ -1,343 +1,412 @@
 
-import React, { useState, useEffect, ChangeEvent } from 'react';
+
+import React, { useState, useEffect, ChangeEvent, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { jsPDF } from 'jspdf';
-import type { Subject, Quiz, Question, Option } from '../App.tsx';
+import type { Subject, Quiz, Question as QuestionType, Option } from '../App.tsx';
+import jsPDF from 'jspdf';
+import QuizMultiSelectModal, { DisplayQuiz as MultiSelectDisplayQuiz } from './QuizRangeSelectionModal.tsx'; // Corrected import path
+
+// Default color values mapping to CSS variables
+const defaultColors = {
+  title: '#233239',        // User requested: Dark Slate Blue/Grey
+  questionText: '#000000', // User requested: Black
+  answerText: '#474747',   // User requested: Dark Grey
+  correctAnswer: '#48BB78',// var(--accent-green) - Kept for correct answer highlight
+};
 
 export interface PdfExportPreferences {
+  showAnswers: boolean;
+  fontSize: number; // Base font size for content pages
+  // layout: '1-column' | '2-column'; // Removed layout option
+  colors: {
+    title: string;
+    questionText: string;
+    answerText: string;
+    correctAnswer: string;
+  };
   selectedSubjectIds: string[];
-  columns: 1 | 2 | 3;
-  includeAnswers: boolean;
 }
 
 interface PdfPreferencesModalProps {
   isOpen: boolean;
   onClose: () => void;
   subjects: Subject[];
-  onGeneratePdf: (preferences: PdfExportPreferences) => void;
 }
 
+const inputClass = "p-2 border rounded-md focus:ring-1 placeholder-[var(--placeholder-color)] bg-[var(--input-bg)] text-[var(--input-text)] border-[var(--input-border)] focus:border-[var(--input-focus-ring)] focus:ring-[var(--input-focus-ring)] text-sm";
 const labelClass = "block text-sm font-medium text-[var(--text-secondary)] mb-1";
-const checkboxLabelClass = "ml-2 text-sm text-[var(--text-primary)] cursor-pointer";
-const radioLabelClass = "ml-2 text-sm text-[var(--text-primary)] cursor-pointer";
-const formElementBaseClass = "bg-[var(--input-bg)] border-[var(--input-border)] text-[var(--input-text)] focus:ring-[var(--input-focus-ring)] focus:border-[var(--input-focus-ring)]";
+const fieldsetLegendClass = "text-md font-semibold text-[var(--accent-primary)] mb-2";
 
-// Colors from theme
-const COLOR_ACCENT_PRIMARY = '#B58863'; // For main title, subject titles
-const COLOR_TEXT_SECONDARY = '#A79E9C'; // For quiz names, answers, other text
-const COLOR_BLACK = '#000000';         // For question text, Option text
-const COLOR_ACCENT_GREEN = '#48BB78';   // For correct MCQ answers
-
-// PDF Generation Helper
-const generatePdfDocument = async (
-  preferences: PdfExportPreferences,
-  allSubjects: Subject[]
-) => {
-  const doc = new jsPDF({
-    orientation: 'p',
-    unit: 'mm',
-    format: 'a4',
-  });
-
-  const FONT_FILENAME = 'Amiri-Regular.ttf'; // The actual filename
-  const FONT_FAMILY_NAME = 'Amiri';        // The name to use with setFont
-  const FONT_STYLE = 'normal';
-  let fontLoadedSuccessfully = false;
-
-  try {
-    const fontUrl = './Amiri-Regular.ttf'; // Assuming it's in the public root or accessible path
-    const fontResponse = await fetch(fontUrl);
-    if (!fontResponse.ok) {
-      throw new Error(`Failed to fetch font: ${fontResponse.status} ${fontResponse.statusText || ''} from ${fontUrl}`);
-    }
-    const fontArrayBuffer = await fontResponse.arrayBuffer();
-    const fontBase64 = btoa(new Uint8Array(fontArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
-
-    doc.addFileToVFS(FONT_FILENAME, fontBase64); // Use actual filename here
-    doc.addFont(FONT_FILENAME, FONT_FAMILY_NAME, FONT_STYLE); // Map filename to family name and style
-    doc.setFont(FONT_FAMILY_NAME, FONT_STYLE); 
-    fontLoadedSuccessfully = true;
-    console.log(`${FONT_FAMILY_NAME} font loaded and registered successfully.`);
-  } catch (error) {
-    console.error(`Error loading ${FONT_FAMILY_NAME} font:`, error);
-    alert(`Could not load the ${FONT_FAMILY_NAME} font required for Arabic characters. PDF will be generated with default font, Arabic text may not render correctly.`);
-    doc.setFont("helvetica", "normal"); // Fallback
-  }
-
-  const { selectedSubjectIds, columns: numColumns, includeAnswers } = preferences;
-
-  const PAGE_WIDTH = 210;
-  const PAGE_HEIGHT = 297;
-  const MARGIN_TOP = 15;
-  const MARGIN_BOTTOM = 15;
-  const MARGIN_LEFT = 15;
-  const MARGIN_RIGHT = 15;
-  const GUTTER = 5;
-
-  const contentWidth = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
-  const columnWidth = (contentWidth - (GUTTER * (numColumns - 1))) / numColumns;
-
-  let currentX = MARGIN_LEFT;
-  let currentY = MARGIN_TOP;
-  let currentColumnIndex = 0;
-  let questionCounter = 0;
-
-  const applyCurrentFontAndStyle = (size?: number, color?: string) => {
-    if (fontLoadedSuccessfully) {
-      doc.setFont(FONT_FAMILY_NAME, FONT_STYLE);
-    } else {
-      doc.setFont("helvetica", "normal");
-    }
-    if (size) doc.setFontSize(size);
-    if (color) doc.setTextColor(color);
-  };
-
-  const goToNextColumnOrPage = () => {
-    currentColumnIndex++;
-    if (currentColumnIndex >= numColumns) {
-      currentColumnIndex = 0;
-      doc.addPage();
-      currentY = MARGIN_TOP;
-    }
-    currentX = MARGIN_LEFT + currentColumnIndex * (columnWidth + GUTTER);
-    applyCurrentFontAndStyle(); // Re-apply font and style on new column/page
-  };
-
-  const checkAndAddPageIfNeeded = (estimatedHeight: number): boolean => {
-    if (currentY + estimatedHeight > PAGE_HEIGHT - MARGIN_BOTTOM) {
-      goToNextColumnOrPage();
-      return true;
-    }
-    return false;
-  };
-
-  // PDF Title and Logo ("Q" as logo part)
-  const mainTitleFontSize = 18; // For " FILE "
-  const logoFontSize = 22;      // For "Q"
-
-  applyCurrentFontAndStyle(logoFontSize, COLOR_ACCENT_PRIMARY);
-  const logoChar = "Q";
-  const logoWidth = doc.getTextWidth(logoChar);
-
-  applyCurrentFontAndStyle(mainTitleFontSize, COLOR_ACCENT_PRIMARY);
-  const fileText = " FILE "; 
-  const fileTextWidth = doc.getTextWidth(fileText);
-
-  const totalTitleCombinedWidth = logoWidth + fileTextWidth;
-  let combinedStartX = (PAGE_WIDTH - totalTitleCombinedWidth) / 2;
-
-  applyCurrentFontAndStyle(logoFontSize, COLOR_ACCENT_PRIMARY);
-  doc.text(logoChar, combinedStartX, currentY);
-
-  applyCurrentFontAndStyle(mainTitleFontSize, COLOR_ACCENT_PRIMARY);
-  doc.text(fileText, combinedStartX + logoWidth, currentY);
-
-  currentY += 10;
-  
-  allSubjects.forEach(subject => {
-    if (!selectedSubjectIds.includes(subject.id)) return;
-
-    checkAndAddPageIfNeeded(15);
-    applyCurrentFontAndStyle(16, COLOR_ACCENT_PRIMARY);
-    const subjectLines = doc.splitTextToSize(subject.name, columnWidth);
-    doc.text(subjectLines, currentX, currentY);
-    currentY += subjectLines.length * 7;
-
-    subject.quizzes.forEach(quiz => {
-      if(!quiz.isStartable && !includeAnswers) return;
-
-      checkAndAddPageIfNeeded(10);
-      applyCurrentFontAndStyle(14, COLOR_TEXT_SECONDARY);
-      const quizLines = doc.splitTextToSize(quiz.name, columnWidth);
-      doc.text(quizLines, currentX, currentY);
-      currentY += quizLines.length * 6;
-      
-      questionCounter = 0;
-
-      quiz.questions.forEach((question, questionIndex) => {
-        questionCounter++;
-
-        if (questionIndex > 0) {
-            const previousQuestionType = quiz.questions[questionIndex - 1].type;
-            if (previousQuestionType !== question.type) {
-                const separatorHeight = 3;
-                const separatorMarginBottom = 2; 
-                if (checkAndAddPageIfNeeded(separatorHeight + separatorMarginBottom)) {
-                     applyCurrentFontAndStyle();
-                }
-                doc.setLineWidth(0.2);
-                doc.setDrawColor(COLOR_TEXT_SECONDARY);
-                doc.line(currentX, currentY, currentX + columnWidth, currentY);
-                currentY += separatorHeight + separatorMarginBottom;
-                doc.setDrawColor(0); 
-            }
-        }
-
-        let estimatedHeight = 0;
-        applyCurrentFontAndStyle(10); // Set for text width calculation
-        const qText = `${questionCounter}. ${question.questionText}`;
-        const questionTextLines = doc.splitTextToSize(qText, columnWidth);
-        estimatedHeight += questionTextLines.length * 5;
-
-        if (question.type === 'mcq' && question.options) {
-          question.options.forEach((opt, index) => {
-            applyCurrentFontAndStyle(10); // Ensure font for option text calculation
-            const optText = `    ${String.fromCharCode(65 + index)}. ${opt.text}`;
-            const optionLines = doc.splitTextToSize(optText, columnWidth - 5);
-            estimatedHeight += optionLines.length * 5;
-          });
-        }
-        
-        if (question.type === 'written' && !includeAnswers) {
-           const reducedAnswerSpaceHeight = 2; 
-           estimatedHeight += reducedAnswerSpaceHeight; 
-        }
-        estimatedHeight += 5; // General spacing after question
-
-        if (checkAndAddPageIfNeeded(estimatedHeight)) {
-          applyCurrentFontAndStyle(10, COLOR_BLACK); // Re-apply for continued text
-          const prevQTextContinued = `${questionCounter}. ${question.questionText.substring(0, 20)}... (continued)`;
-          doc.text(prevQTextContinued, currentX, currentY);
-          currentY += 5;
-        }
-        
-        applyCurrentFontAndStyle(10, COLOR_BLACK);
-        doc.text(questionTextLines, currentX, currentY);
-        currentY += questionTextLines.length * 5;
-
-
-        if (question.type === 'mcq' && question.options) {
-          question.options.forEach((opt, index) => {
-            const isCorrect = opt.id === question.correctOptionId;
-            const optText = `    ${String.fromCharCode(65 + index)}. ${opt.text}`;
-
-            applyCurrentFontAndStyle(10); // Ensure font for option text calculation
-            const optionTextLines = doc.splitTextToSize(optText, columnWidth - 5); 
-            if (checkAndAddPageIfNeeded(optionTextLines.length * 5)) {
-                applyCurrentFontAndStyle(10); // Re-apply font
-                 if (currentColumnIndex === 0 && questionIndex > 0 && currentY === MARGIN_TOP) { 
-                     doc.setTextColor(COLOR_TEXT_SECONDARY);
-                     doc.text("(options continued)", currentX, currentY - 2); 
-                 }
-            }
-            
-            if (includeAnswers && isCorrect) {
-              applyCurrentFontAndStyle(10, COLOR_ACCENT_GREEN);
-            } else {
-              applyCurrentFontAndStyle(10, COLOR_BLACK); 
-            }
-            doc.text(optionTextLines, currentX + 2, currentY); // Indent options
-            currentY += optionTextLines.length * 5;
-          });
-
-        } else if (question.type === 'written') {
-            if (!includeAnswers) {
-                const reducedAnswerSpaceHeight = 2; 
-                const spaceForContinuedText = 5;
-                if (checkAndAddPageIfNeeded(reducedAnswerSpaceHeight + (currentY === MARGIN_TOP ? spaceForContinuedText : 0))) {
-                    applyCurrentFontAndStyle(10); // Re-apply font
-                     if (currentColumnIndex === 0 && questionIndex > 0 && currentY === MARGIN_TOP) {
-                       doc.setTextColor(COLOR_BLACK);
-                       doc.text(`${questionCounter}. (answer space continued)`, currentX, currentY);
-                       currentY += spaceForContinuedText; 
-                   }
-                }
-                currentY += reducedAnswerSpaceHeight; 
-            }
-        }
-        currentY += 3; // Spacing after each question block
-      });
-       currentY += 5; // Spacing after quiz block
-    });
-    currentY += 7; // Spacing after subject block
-  });
-  doc.save('Q_FILE.pdf'); 
-};
+// PDF constants
+const PAGE_WIDTH_PT = 595.28; // A4 width in points
+const PAGE_HEIGHT_PT = 841.89; // A4 height in points
+const MARGIN_PT = 40;
+const CONTENT_WIDTH_PT = PAGE_WIDTH_PT - 2 * MARGIN_PT;
+const LINE_HEIGHT_MULTIPLIER = 1.4;
+const COVER_PAGE_TEXT_COLOR = '#000000'; // Black
+const COVER_PAGE_FONT_SIZE_PT = 18;
+const CONTENT_PAGE_START_Y = 135;
 
 
 const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
   isOpen,
   onClose,
   subjects,
-  onGeneratePdf,
 }) => {
-  const [selectedSubjectIds, setSelectedSubjectIds] = useState<Set<string>>(new Set());
-  const [numColumns, setNumColumns] = useState<1 | 2 | 3>(1);
-  const [includeAnswers, setIncludeAnswers] = useState<boolean>(false);
+  const [prefs, setPrefs] = useState<PdfExportPreferences>({
+    showAnswers: true,
+    fontSize: 12,
+    // layout: '1-column', // Removed layout option
+    colors: { ...defaultColors } as PdfExportPreferences['colors'],
+    selectedSubjectIds: [],
+  });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [arabicFontLoaded, setArabicFontLoaded] = useState(false);
+  const [showQuizSelectModal, setShowQuizSelectModal] = useState(false);
+  const [selectedIndividualQuizIds, setSelectedIndividualQuizIds] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedSubjectIds(new Set(subjects.map(s => s.id)));
-      setNumColumns(1);
-      setIncludeAnswers(false);
+      setPrefs({
+        showAnswers: true,
+        fontSize: 12,
+        // layout: '1-column', // Removed layout option
+        colors: { ...defaultColors } as PdfExportPreferences['colors'],
+        selectedSubjectIds: subjects.map(s => s.id),
+      });
       setIsGenerating(false);
+      setArabicFontLoaded(false);
+      setShowQuizSelectModal(false);
+      setSelectedIndividualQuizIds(null); // Default to all quizzes from selected subjects
     }
   }, [isOpen, subjects]);
 
-  if (!isOpen) {
+  const flatQuizzesForSelector = useMemo(() => {
+    if (!isOpen) return [];
+    const flatList: Array<MultiSelectDisplayQuiz> = [];
+    subjects.forEach(subject => {
+        if (prefs.selectedSubjectIds.includes(subject.id)) {
+            subject.quizzes.filter(q => q.isStartable).forEach(quiz => {
+                flatList.push({
+                    id: quiz.id,
+                    name: quiz.name,
+                    subjectName: subject.name,
+                    subjectId: subject.id,
+                });
+            });
+        }
+    });
+    return flatList;
+  }, [subjects, prefs.selectedSubjectIds, isOpen]);
+
+  if (!isOpen && !showQuizSelectModal) { 
     return null;
   }
 
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    if (type === 'checkbox') {
+      const { checked } = e.target as HTMLInputElement;
+      setPrefs(prev => ({ ...prev, [name]: checked }));
+    } else if (type === 'number') {
+      setPrefs(prev => ({ ...prev, [name]: parseInt(value, 10) }));
+    } else {
+      setPrefs(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleColorChange = (colorName: keyof PdfExportPreferences['colors'], value: string) => {
+    setPrefs(prev => ({
+      ...prev,
+      colors: { ...prev.colors, [colorName]: value },
+    }));
+  };
+
   const handleSubjectSelectionChange = (subjectId: string) => {
-    setSelectedSubjectIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(subjectId)) {
-        newSet.delete(subjectId);
-      } else {
-        newSet.add(subjectId);
-      }
-      return newSet;
+    setPrefs(prev => {
+      const newSelectedSubjectIds = prev.selectedSubjectIds.includes(subjectId)
+        ? prev.selectedSubjectIds.filter(id => id !== subjectId)
+        : [...prev.selectedSubjectIds, subjectId];
+      // Reset individual quiz selection if subject selection changes
+      setSelectedIndividualQuizIds(null); 
+      return { ...prev, selectedSubjectIds: newSelectedSubjectIds };
     });
   };
 
-  const handleSelectAllSubjects = () => {
-    setSelectedSubjectIds(new Set(subjects.map(s => s.id)));
+
+  const handleOpenQuizSelectModal = () => {
+    if (prefs.selectedSubjectIds.length === 0) {
+        alert("Please select at least one subject before selecting specific quizzes.");
+        return;
+    }
+    setShowQuizSelectModal(true);
   };
 
-  const handleDeselectAllSubjects = () => {
-    setSelectedSubjectIds(new Set());
+  const handleApplyQuizSelection = (selectedIds: string[]) => {
+    setSelectedIndividualQuizIds(selectedIds.length > 0 ? selectedIds : null);
+    setShowQuizSelectModal(false);
   };
 
-  const handleGenerateClick = async () => {
-    setIsGenerating(true);
-    await new Promise(resolve => setTimeout(resolve, 50)); 
+  const loadFileAsBase64 = async (url: string, expectedTypePrefix: string): Promise<string> => {
+    let response: Response;
     try {
-        const currentPreferences: PdfExportPreferences = {
-            selectedSubjectIds: Array.from(selectedSubjectIds),
-            columns: numColumns,
-            includeAnswers: includeAnswers,
+      response = await fetch(url);
+    } catch (networkError) {
+      console.error(`Network error loading file ${url}:`, networkError);
+      throw new Error(`Network error loading file ${url}: ${networkError instanceof Error ? networkError.message : String(networkError)}`);
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "Could not retrieve error body.");
+      console.error(`Failed to load file ${url}: ${response.status} ${response.statusText}. Body: ${errorText.substring(0, 200)}`);
+      throw new Error(`Failed to load file ${url}: ${response.status} ${response.statusText}`);
+    }
+
+    const contentTypeFromServer = response.headers.get('Content-Type');
+
+    try {
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          let result = reader.result as string;
+          const genericOctetStreamPrefix = 'data:application/octet-stream;base64,';
+          const isExpectedImage = expectedTypePrefix.startsWith('data:image/');
+
+          if (result.startsWith(expectedTypePrefix)) {
+            resolve(result);
+          } else if (isExpectedImage && result.startsWith(genericOctetStreamPrefix)) {
+            console.warn(`File ${url} (expected ${expectedTypePrefix}) was received as octet-stream. Correcting MIME type for PDF.`);
+            result = expectedTypePrefix + result.substring(genericOctetStreamPrefix.length);
+            resolve(result);
+          } else {
+            const actualPrefix = result.substring(0, Math.min(result.indexOf(';') + 8, result.length, 50)) + "...";
+            const errMsg = `File ${url} loaded with unexpected type. Expected prefix: ${expectedTypePrefix}, but got: ${actualPrefix} (Full Content-Type from server: ${contentTypeFromServer || 'N/A'}). Check if the file is correct and accessible.`;
+            console.error(errMsg);
+            reject(new Error(errMsg));
+          }
         };
-        await generatePdfDocument(currentPreferences, subjects);
-        onGeneratePdf(currentPreferences); 
+        reader.onerror = (errorEvent) => {
+            const errMsg = `FileReader error for ${url}: ${errorEvent.target?.error?.message || 'Unknown FileReader error'}`;
+            console.error(errMsg, errorEvent);
+            reject(new Error(errMsg));
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (blobError) {
+      console.error(`Error processing blob for ${url}:`, blobError);
+      throw new Error(`Error processing blob for ${url}: ${blobError instanceof Error ? blobError.message : String(blobError)}`);
+    }
+  };
+
+
+  const handleSubmit = async () => {
+    if (prefs.selectedSubjectIds.length === 0) {
+      alert("Please select at least one subject to include in the PDF.");
+      return;
+    }
+    // Removed 2-column layout warning
+
+    setIsGenerating(true);
+    let fontActuallyLoaded = false;
+
+    try {
+      const doc = new jsPDF({
+        orientation: 'p',
+        unit: 'pt',
+        format: 'a4',
+      });
+
+      try {
+        const amiriFontBase64Raw = await loadFileAsBase64('/assets/Amiri-Regular.ttf', 'data:application/octet-stream;base64,');
+        const amiriFontBase64 = amiriFontBase64Raw.substring(amiriFontBase64Raw.indexOf(',') + 1);
+        doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
+        doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+        doc.addFont('Amiri-Regular.ttf', 'Amiri', 'bold');
+        doc.setFont('Amiri', 'normal');
+        fontActuallyLoaded = true;
+        setArabicFontLoaded(true);
+      } catch (fontError) {
+        console.warn("Failed to load Amiri-Regular.ttf. PDF will be generated with default fonts.", fontError);
+        doc.setFont('Helvetica', 'normal');
+      }
+
+      const mainPageImageBase64 = await loadFileAsBase64('/assets/main.PNG', 'data:image/png;base64,');
+      const regularPageImageBase64 = await loadFileAsBase64('/assets/regular.PNG', 'data:image/png;base64,');
+
+      let currentY = MARGIN_PT; 
+      const subjectTitleRenderSize = prefs.fontSize * 1.5; 
+
+      const applyFontAndColor = (fontSize: number, color: string, isBold: boolean = false) => {
+        doc.setFontSize(fontSize);
+        doc.setTextColor(color);
+        if (fontActuallyLoaded) {
+            doc.setFont('Amiri', isBold ? 'bold' : 'normal');
+        } else {
+            doc.setFont('Helvetica', isBold ? 'bold' : 'normal');
+        }
+      };
+      
+      const checkAndAddPage = (neededHeight: number = prefs.fontSize * LINE_HEIGHT_MULTIPLIER) => {
+        if (currentY + neededHeight > PAGE_HEIGHT_PT - MARGIN_PT) { 
+          doc.addPage();
+          doc.addImage(regularPageImageBase64, 'PNG', 0, 0, PAGE_WIDTH_PT, PAGE_HEIGHT_PT, undefined, 'FAST');
+          currentY = CONTENT_PAGE_START_Y; 
+        }
+      };
+
+      const addWrappedText = (text: string, x: number, maxWidth: number, fontSize: number, color: string, isBold: boolean = false, isCoverPageText: boolean = false) => {
+        applyFontAndColor(fontSize, color, isBold);
+        const lines = doc.splitTextToSize(text, maxWidth);
+        const effectiveLineHeightMultiplier = isCoverPageText ? LINE_HEIGHT_MULTIPLIER * 1.1 : LINE_HEIGHT_MULTIPLIER;
+        const textHeight = lines.length * fontSize * (isBold ? 1.05 : 1.0) * effectiveLineHeightMultiplier * 0.8;
+
+        if (!isCoverPageText) checkAndAddPage(textHeight);
+        doc.text(lines, x, currentY);
+        currentY += textHeight + (fontSize * (effectiveLineHeightMultiplier * 0.2));
+      };
+
+      // --- Cover Page ---
+      doc.addImage(mainPageImageBase64, 'PNG', 0, 0, PAGE_WIDTH_PT, PAGE_HEIGHT_PT, undefined, 'FAST');
+      currentY = 416 + (COVER_PAGE_FONT_SIZE_PT * LINE_HEIGHT_MULTIPLIER * 1.1); 
+      applyFontAndColor(COVER_PAGE_FONT_SIZE_PT, COVER_PAGE_TEXT_COLOR, true);
+      doc.text("Subjects included:", 28, 416); 
+
+      const subjectsToDisplayOnCover = subjects.filter(s => prefs.selectedSubjectIds.includes(s.id));
+      if (subjectsToDisplayOnCover.length > 0) {
+        subjectsToDisplayOnCover.forEach(sub => {
+            if (currentY + (COVER_PAGE_FONT_SIZE_PT * LINE_HEIGHT_MULTIPLIER * 1.1) > PAGE_HEIGHT_PT - MARGIN_PT) { 
+                doc.addPage();
+                doc.addImage(regularPageImageBase64, 'PNG', 0, 0, PAGE_WIDTH_PT, PAGE_HEIGHT_PT, undefined, 'FAST'); 
+                currentY = CONTENT_PAGE_START_Y; 
+            }
+            addWrappedText(`- ${sub.name}`, MARGIN_PT + 20, CONTENT_WIDTH_PT - 20, COVER_PAGE_FONT_SIZE_PT, COVER_PAGE_TEXT_COLOR, false, true);
+        });
+      }
+      // --- End Cover Page ---
+
+      let quizzesForExport: Array<Quiz & { subjectName: string; subjectId: string }> = [];
+      
+      subjects.forEach(subject => {
+        if (prefs.selectedSubjectIds.includes(subject.id)) {
+          subject.quizzes
+            .filter(q => q.isStartable && q.questions.length > 0)
+            .forEach(quiz => {
+              if (selectedIndividualQuizIds === null || selectedIndividualQuizIds.includes(quiz.id)) {
+                quizzesForExport.push({
+                  ...quiz,
+                  subjectName: subject.name,
+                  subjectId: subject.id,
+                });
+              }
+            });
+        }
+      });
+      // Ensure quizzesForExport are sorted by original subject order, then quiz order within subject.
+      // This is implicitly handled if `subjects` array is stable and iteration order is preserved.
+
+
+      // --- Content Pages ---
+      let isFirstContentPageAfterCover = true;
+      for (const quiz of quizzesForExport) {
+        if (isFirstContentPageAfterCover) {
+          doc.addPage();
+          doc.addImage(regularPageImageBase64, 'PNG', 0, 0, PAGE_WIDTH_PT, PAGE_HEIGHT_PT, undefined, 'FAST');
+          currentY = CONTENT_PAGE_START_Y;
+          isFirstContentPageAfterCover = false;
+        } else {
+          const estimatedHeightForNextQuiz = (subjectTitleRenderSize * LINE_HEIGHT_MULTIPLIER) + (prefs.fontSize * 1.2 * LINE_HEIGHT_MULTIPLIER);
+          checkAndAddPage(estimatedHeightForNextQuiz); 
+        }
+        
+        const subjectNameMaxWidth = CONTENT_WIDTH_PT - (70 - MARGIN_PT);
+        addWrappedText(quiz.subjectName, 70, subjectNameMaxWidth, subjectTitleRenderSize, prefs.colors.title, true);
+        currentY += prefs.fontSize * 0.2; 
+        
+        addWrappedText(quiz.name, MARGIN_PT, CONTENT_WIDTH_PT, prefs.fontSize * 1.2, prefs.colors.title, true);
+        currentY += prefs.fontSize * 0.7; 
+
+        quiz.questions.forEach((question, qIndex) => {
+          addWrappedText(`${qIndex + 1}. ${question.questionText}`, MARGIN_PT, CONTENT_WIDTH_PT, prefs.fontSize, prefs.colors.questionText);
+          currentY += prefs.fontSize * 0.3;
+
+          if (question.type === 'mcq' && question.options) {
+            question.options.forEach((option, oIndex) => {
+              const optionLetter = String.fromCharCode(65 + oIndex);
+              let optionDisplay = `${optionLetter}. ${option.text}`;
+              let optionColor = prefs.colors.answerText;
+
+              if (prefs.showAnswers && option.id === question.correctOptionId) {
+                optionColor = prefs.colors.correctAnswer;
+              }
+              addWrappedText(optionDisplay, MARGIN_PT + 20, CONTENT_WIDTH_PT - 20, prefs.fontSize * 0.9, optionColor);
+              currentY += prefs.fontSize * 0.1;
+            });
+          }
+          currentY += prefs.fontSize * 0.5; 
+        });
+      }
+
+      if (quizzesForExport.length === 0 && prefs.selectedSubjectIds.length > 0) {
+        if (isFirstContentPageAfterCover) {
+            doc.addPage();
+            doc.addImage(regularPageImageBase64, 'PNG', 0, 0, PAGE_WIDTH_PT, PAGE_HEIGHT_PT, undefined, 'FAST');
+        }
+        currentY = CONTENT_PAGE_START_Y;
+        addWrappedText("No quizzes match the current selection criteria.", MARGIN_PT, CONTENT_WIDTH_PT, prefs.fontSize, prefs.colors.questionText);
+      }
+
+      doc.save('Quiz_Export.pdf');
+
     } catch (error) {
-        console.error("Error generating PDF:", error);
-        alert("An error occurred while generating the PDF. Please check the console for details.");
+      console.error("Error generating PDF:", error);
+      alert(`Failed to generate PDF. Check console for details. Error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
-        setIsGenerating(false);
+      setIsGenerating(false);
+      onClose();
     }
   };
 
   const modalRoot = document.getElementById('modal-root');
-  if (!modalRoot) {
+  if (!modalRoot && isOpen) { 
     console.error("Modal root element 'modal-root' not found for PdfPreferencesModal.");
     return null;
   }
+  if (!isOpen) return null;
+
+  const colorFields: Array<{ key: keyof PdfExportPreferences['colors']; label: string }> = [
+    { key: 'title', label: 'Title Color (Content)' },
+    { key: 'questionText', label: 'Question Text Color' },
+    { key: 'answerText', label: 'Answer Text Color' },
+    { key: 'correctAnswer', label: 'Correct Answer Highlight' },
+  ];
+
+  const getQuizSelectionButtonText = () => {
+    if (selectedIndividualQuizIds === null) {
+        return "Select Specific Quizzes... (All from selected subjects)";
+    }
+    if (selectedIndividualQuizIds.length === 0) {
+        return "Select Specific Quizzes... (None selected)";
+    }
+    return `${selectedIndividualQuizIds.length} Quizzes Selected`;
+  };
+
 
   return createPortal(
     <div
       className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="pdf-preferences-modal-title"
+      aria-labelledby="pdf-prefs-modal-title"
       onClick={isGenerating ? undefined : onClose}
     >
       <div
-        className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden border border-[var(--border-color)]"
+        className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-[var(--border-color)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--border-color)] bg-[var(--bg-secondary)] rounded-t-xl">
-          <h2 id="pdf-preferences-modal-title" className="text-lg sm:text-xl font-semibold text-[var(--accent-primary)]">
+        <header className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--border-color)] bg-[var(--bg-secondary)] rounded-t-xl shrink-0">
+          <h2 id="pdf-prefs-modal-title" className="text-lg sm:text-xl font-semibold text-[var(--accent-primary)]">
             PDF Export Preferences
           </h2>
           <button
@@ -350,66 +419,99 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
           </button>
         </header>
 
-        <div className="p-4 sm:p-6 overflow-y-auto flex-grow custom-scrollbar space-y-6">
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto custom-scrollbar flex-grow">
           <fieldset disabled={isGenerating}>
-            <legend className={`${labelClass} text-md font-medium text-[var(--text-primary)] mb-2`}>Select Subjects</legend>
-            <div className="flex space-x-2 mb-2">
-                <button onClick={handleSelectAllSubjects} className="text-xs px-2 py-1 bg-[var(--btn-secondary-bg)] hover:bg-[var(--btn-secondary-hover-bg)] text-[var(--btn-secondary-text)] rounded disabled:opacity-50" disabled={isGenerating}>Select All</button>
-                <button onClick={handleDeselectAllSubjects} className="text-xs px-2 py-1 bg-[var(--btn-secondary-bg)] hover:bg-[var(--btn-secondary-hover-bg)] text-[var(--btn-secondary-text)] rounded disabled:opacity-50" disabled={isGenerating}>Deselect All</button>
-            </div>
-            <div className="max-h-48 overflow-y-auto space-y-1 p-2 border border-[var(--border-color)] rounded-md custom-scrollbar bg-[var(--bg-primary)]">
-              {subjects.map(subject => (
-                <label key={subject.id} className={`flex items-center p-1.5 rounded ${isGenerating ? 'cursor-not-allowed' : 'hover:bg-[var(--accent-secondary)] hover:bg-opacity-20 cursor-pointer'}`}>
-                  <input
-                    type="checkbox"
-                    checked={selectedSubjectIds.has(subject.id)}
-                    onChange={() => handleSubjectSelectionChange(subject.id)}
-                    className={`h-4 w-4 rounded ${formElementBaseClass} text-[var(--accent-primary)] disabled:opacity-70`}
-                    disabled={isGenerating}
-                  />
-                  <span className={`${checkboxLabelClass} ${isGenerating ? 'opacity-70' : ''}`}>{subject.name}</span>
-                </label>
-              ))}
-              {subjects.length === 0 && <p className="text-sm text-[var(--text-secondary)]">No subjects available.</p>}
-            </div>
-          </fieldset>
-
-          <fieldset disabled={isGenerating}>
-            <legend className={`${labelClass} text-md font-medium text-[var(--text-primary)] mb-2`}>Layout Columns</legend>
-            <div className="flex space-x-4">
-              {([1, 2, 3] as const).map(col => (
-                <label key={col} className={`flex items-center ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-                  <input
-                    type="radio"
-                    name="columns"
-                    value={col}
-                    checked={numColumns === col}
-                    onChange={() => setNumColumns(col)}
-                    className={`h-4 w-4 ${formElementBaseClass} text-[var(--accent-primary)] disabled:opacity-70`}
-                    disabled={isGenerating}
-                  />
-                  <span className={`${radioLabelClass} ${isGenerating ? 'opacity-70' : ''}`}>{col} Column{col > 1 ? 's' : ''}</span>
-                </label>
-              ))}
+            <legend className={fieldsetLegendClass}>General Options</legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+              <div className="flex items-center space-x-2 p-2 border border-[var(--input-border)] rounded-md bg-[var(--input-bg)]">
+                <input
+                  type="checkbox"
+                  id="showAnswers"
+                  name="showAnswers"
+                  checked={prefs.showAnswers}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-[var(--accent-primary)] bg-[var(--input-bg)] border-[var(--input-border)] focus:ring-[var(--accent-primary)] rounded cursor-pointer"
+                />
+                <label htmlFor="showAnswers" className="text-sm text-[var(--input-text)] cursor-pointer">Show Answers in PDF</label>
+              </div>
+              <div>
+                <label htmlFor="fontSize" className={labelClass}>Base Font Size (Content Pages)</label>
+                <input
+                  type="number"
+                  id="fontSize"
+                  name="fontSize"
+                  value={prefs.fontSize}
+                  onChange={handleInputChange}
+                  min="8" max="32" step="1"
+                  className={`${inputClass} w-full`}
+                />
+              </div>
+              {/* Removed Layout Radio Buttons */}
             </div>
           </fieldset>
 
           <fieldset disabled={isGenerating}>
-            <legend className={`${labelClass} text-md font-medium text-[var(--text-primary)] mb-2`}>Content Options</legend>
-            <label className={`flex items-center ${isGenerating ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
-              <input
-                type="checkbox"
-                checked={includeAnswers}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setIncludeAnswers(e.target.checked)}
-                className={`h-4 w-4 rounded ${formElementBaseClass} text-[var(--accent-primary)] disabled:opacity-70`}
-                disabled={isGenerating}
-              />
-              <span className={`${checkboxLabelClass} ${isGenerating ? 'opacity-70' : ''}`}>Include answer information</span>
-            </label>
+            <legend className={fieldsetLegendClass}>Color Scheme (Content Pages)</legend>
+            {/* Removed the specific paragraph about cover page text color and font size */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+              {colorFields.map(field => (
+                <div key={field.key}>
+                  <label htmlFor={field.key} className={`${labelClass} truncate`} title={field.label}>{field.label}</label>
+                  <input
+                    type="color"
+                    id={field.key}
+                    name={field.key}
+                    value={prefs.colors[field.key as keyof typeof prefs.colors]}
+                    onChange={(e) => handleColorChange(field.key as keyof PdfExportPreferences['colors'], e.target.value)}
+                    className="w-full h-9 p-0.5 border rounded-md cursor-pointer bg-[var(--input-bg)] border-[var(--input-border)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
+                  />
+                </div>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset disabled={isGenerating}>
+            <legend className={fieldsetLegendClass}>Select Content</legend>
+            {subjects.length > 0 ? (
+                <>
+                    <div className="flex flex-wrap gap-2 mb-3 items-center">
+                        <button
+                            onClick={handleOpenQuizSelectModal}
+                            disabled={prefs.selectedSubjectIds.length === 0}
+                            className="px-3 py-1.5 text-xs bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] text-[var(--btn-primary-text)] rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed truncate max-w-xs"
+                            title={getQuizSelectionButtonText()}
+                        >
+                            {getQuizSelectionButtonText()}
+                        </button>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto space-y-2 pr-2 custom-scrollbar border border-[var(--input-border)] bg-[var(--input-bg)] rounded-md p-3">
+                    {subjects.map(subject => {
+                        const quizCount = subject.quizzes.filter(q => q.isStartable).length;
+                        return (
+                        <label key={subject.id} className="flex items-center space-x-2 p-2 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md cursor-pointer hover:bg-[var(--accent-secondary)] hover:bg-opacity-10">
+                            <input
+                            type="checkbox"
+                            checked={prefs.selectedSubjectIds.includes(subject.id)}
+                            onChange={() => handleSubjectSelectionChange(subject.id)}
+                            className="h-4 w-4 text-[var(--accent-primary)] bg-[var(--input-bg)] border-[var(--input-border)] focus:ring-[var(--accent-primary)] rounded"
+                            />
+                            <span className="text-sm text-[var(--input-text)] flex-grow truncate" title={subject.name}>{subject.name}</span>
+                            <span className="text-xs text-[var(--text-secondary)] shrink-0">({quizCount} quiz{quizCount !== 1 ? 'zes' : ''})</span>
+                        </label>
+                        );
+                    })}
+                    </div>
+                     {prefs.selectedSubjectIds.length === 0 && (
+                        <p className="text-xs text-[var(--text-secondary)] italic mt-1">Select subjects to enable quiz selection.</p>
+                    )}
+                </>
+            ) : (
+                <p className="text-sm text-[var(--text-secondary)]">No subjects available to select.</p>
+            )}
           </fieldset>
         </div>
 
-        <footer className="p-4 sm:p-5 border-t border-[var(--border-color)] bg-[var(--bg-secondary)] rounded-b-xl flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+        <footer className="p-4 sm:p-5 border-t border-[var(--border-color)] bg-[var(--bg-secondary)] rounded-b-xl flex justify-end space-x-3 shrink-0">
           <button
             onClick={isGenerating ? undefined : onClose}
             disabled={isGenerating}
@@ -418,9 +520,9 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
             Cancel
           </button>
           <button
-            onClick={handleGenerateClick}
-            disabled={selectedSubjectIds.size === 0 || isGenerating}
-            className="px-4 py-2 text-sm font-medium bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover-bg)] text-[var(--btn-primary-text)] rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--btn-primary-focus-ring)] disabled:opacity-50 flex items-center justify-center"
+            onClick={handleSubmit}
+            disabled={isGenerating || subjects.length === 0 || prefs.selectedSubjectIds.length === 0}
+            className="px-4 py-2 text-sm font-medium bg-[var(--btn-primary-bg)] hover:bg-[var(--btn-primary-hover-bg)] text-[var(--btn-primary-text)] rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--btn-primary-focus-ring)] disabled:opacity-50 flex items-center justify-center min-w-[120px]"
           >
             {isGenerating ? (
               <>
@@ -428,11 +530,20 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
                 Generating...
               </>
             ) : (
-              "Generate PDF"
+             "Generate PDF"
             )}
           </button>
         </footer>
       </div>
+      {showQuizSelectModal && (
+        <QuizMultiSelectModal
+            isOpen={showQuizSelectModal}
+            onClose={() => setShowQuizSelectModal(false)}
+            allQuizzes={flatQuizzesForSelector}
+            initiallySelectedQuizIds={selectedIndividualQuizIds || []}
+            onApplySelection={handleApplyQuizSelection}
+        />
+      )}
     </div>,
     modalRoot
   );

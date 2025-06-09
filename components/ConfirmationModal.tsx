@@ -88,7 +88,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 className="w-full p-3 border border-[var(--input-border)] rounded-md bg-[var(--input-bg)] text-[var(--input-text)] focus:ring-2 focus:ring-[var(--input-focus-ring)] focus:border-[var(--input-focus-ring)] placeholder-[var(--placeholder-color)]"
                 placeholder="Enter confirmation password"
                 required
-                autoFocus
+                // autoFocus removed
               />
             </div>
           )}

@@ -1,15 +1,17 @@
 
 import React from 'react';
+import type { AppViewMode } from '../App.tsx'; // Import AppViewMode
 
 interface HeaderProps {
   contextTitle: string;
   isAdminView: boolean;
   isAdminAuthenticated: boolean;
+  currentAppViewMode: AppViewMode;
   onSwitchToAdminView: () => void;
   onSwitchToUserView: () => void;
   onAdminLogout: () => void;
   dataTimestamp: string | null;
-  onShowTimestampModal: () => void; 
+  onShowTimestampModal: () => void;
 }
 
 interface TimestampDisplayInfo {
@@ -33,19 +35,19 @@ const getTimestampDisplayInfo = (isoString: string | null): TimestampDisplayInfo
 
     let timeDescResult: string;
 
-    if (diffInSeconds < 0) { 
+    if (diffInSeconds < 0) {
         const dateStr = updateDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
         const timeStr = updateDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-        timeDescResult = `${dateStr}, ${timeStr}`; 
+        timeDescResult = `${dateStr}, ${timeStr}`;
     } else if (diffInSeconds < 60) {
       timeDescResult = "just now";
-    } else if (diffInSeconds < 3600) { 
+    } else if (diffInSeconds < 3600) {
       const minutes = Math.floor(diffInSeconds / 60);
       timeDescResult = `${minutes} min ago`;
-    } else if (diffInSeconds < 86400) { 
+    } else if (diffInSeconds < 86400) {
       const hours = Math.floor(diffInSeconds / 3600);
       timeDescResult = `${hours} h ago`;
-    } else { 
+    } else {
       const dateStr = updateDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
       const timeStr = updateDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
       timeDescResult = `${dateStr}, ${timeStr}`;
@@ -62,11 +64,23 @@ const getTimestampDisplayInfo = (isoString: string | null): TimestampDisplayInfo
   }
 };
 
+const QLogoStandard: React.FC = () => (
+  <div
+    className="h-14 w-14 sm:h-16 sm:w-16 rounded-full border-2 border-[var(--bg-header)] shadow-md transition-transform duration-200 ease-in-out hover:scale-110 flex items-center justify-center bg-[var(--text-primary)] shrink-0"
+    aria-label="App Logo Q"
+  >
+    <span className="text-[var(--bg-primary)] font-bold text-[2rem] sm:text-[2.4rem] select-none" style={{ fontFamily: 'Roboto, sans-serif'}}>
+      Q
+    </span>
+  </div>
+);
+
 
 const Header: React.FC<HeaderProps> = ({ 
   contextTitle, 
   isAdminView, 
-  isAdminAuthenticated, 
+  isAdminAuthenticated,
+  currentAppViewMode, 
   onSwitchToAdminView,
   onSwitchToUserView,
   onAdminLogout,
@@ -74,73 +88,67 @@ const Header: React.FC<HeaderProps> = ({
   onShowTimestampModal
 }) => {
   const timestampInfo = getTimestampDisplayInfo(dataTimestamp);
+  const textPrimaryRGB = "211, 195, 185"; // Corresponds to --text-primary
 
-  let displayTimestampText = "";
-  if (timestampInfo) {
-    displayTimestampText = `last updated : ${timestampInfo.timeDescription}`;
-  }
-  
-  const textPrimaryRGB = "211, 195, 185";
+  const adminLogoutButton = isAdminView && isAdminAuthenticated && (
+    <button
+      onClick={onAdminLogout}
+      className="p-2.5 bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white border border-[var(--accent-red-hover)] rounded-full transition-colors shrink-0 text-xs sm:text-sm flex items-center justify-center h-9 w-9 sm:h-10 sm:w-10 focus:outline-none focus:ring-2 focus:ring-[var(--accent-red)] focus:ring-offset-2 focus:ring-offset-[var(--bg-header)]"
+      aria-label="Logout from Admin Panel"
+      title="Admin Logout"
+    >
+      <i className="fa-solid fa-right-from-bracket fa-fw text-base"></i>
+    </button>
+  );
+
+  const viewToggleButton = isAdminView ? (
+    <button
+      onClick={onSwitchToUserView}
+      className="px-3 sm:px-4 py-1.5 sm:py-2 bg-transparent hover:bg-[var(--text-primary)] text-[var(--text-primary)] hover:text-[var(--bg-primary)] border border-[var(--text-primary)] rounded-md transition-colors shrink-0 text-xs sm:text-sm flex items-center"
+      aria-label="Switch to User View"
+    >
+      <i className="fa-solid fa-user-graduate fa-fw mr-1.5 sm:mr-2"></i>
+      <span>User View</span>
+    </button>
+  ) : (
+    // Removed condition currentAppViewMode !== 'BattleRoyale' as it's no longer relevant
+      <button
+        onClick={onSwitchToAdminView}
+        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-transparent hover:bg-[var(--text-primary)] text-[var(--text-primary)] hover:text-[var(--bg-primary)] border border-[var(--text-primary)] rounded-md transition-colors shrink-0 text-xs sm:text-sm flex items-center"
+        aria-label="Switch to Admin Panel"
+      >
+        <i className="fa-solid fa-headset mr-1.5 sm:mr-2"></i>
+        <span>Admin Panel</span>
+      </button>
+  );
+
+  const inlineTimestampButton = timestampInfo && (
+    <button
+      onClick={onShowTimestampModal}
+      className="text-[var(--text-primary)] text-[0.6rem] sm:text-xs opacity-80 hover:opacity-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)] rounded p-0.5"
+      title={timestampInfo.tooltip}
+      aria-label={`Content update details: ${timestampInfo.tooltip}`}
+    >
+      <span className="block">{`last updated : ${timestampInfo.timeDescription}`}</span>
+    </button>
+  );
 
 
   return (
     <header className="bg-[var(--bg-header)] sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3">
-        <div className="flex justify-between items-center pb-3">
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            <div
-              className="h-14 w-14 sm:h-20 sm:w-20 rounded-full border-2 border-[var(--bg-header)] shadow-md transition-transform duration-200 ease-in-out hover:scale-110 flex items-center justify-center bg-[var(--text-primary)] shrink-0"
-              aria-label="App Logo Q"
-            >
-              <span className="text-[var(--bg-primary)] font-bold text-[2.2rem] sm:text-[2.8rem] select-none" style={{ fontFamily: 'Roboto, sans-serif'}}>
-                Q
-              </span>
+        {/* Normal View Header Layout */}
+        <div className="flex items-center justify-between pb-3">
+            <div className="flex items-center space-x-2 sm:space-x-3"> {/* Group Logo and Timestamp */}
+            <QLogoStandard />
+            {inlineTimestampButton}
             </div>
-            {timestampInfo && displayTimestampText && (
-              <button
-                onClick={onShowTimestampModal}
-                className="text-[var(--text-primary)] text-[0.6rem] sm:text-xs opacity-80 leading-tight hover:opacity-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--text-primary)] rounded text-left p-0.5"
-                title={timestampInfo.tooltip}
-                aria-label={`Content update details: ${timestampInfo.tooltip}`}
-              >
-                <span className="block">{displayTimestampText}</span>
-              </button>
-            )}
-          </div>
-          <div className="flex items-center space-x-2">
-            {isAdminView && isAdminAuthenticated && (
-              <button
-                onClick={onAdminLogout}
-                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[var(--accent-red)] hover:bg-[var(--accent-red-hover)] text-white border border-[var(--accent-red-hover)] rounded-md transition-colors shrink-0 text-xs sm:text-sm flex items-center"
-                aria-label="Logout from Admin Panel"
-              >
-                <i className="fa-solid fa-right-from-bracket fa-fw mr-1.5 sm:mr-2"></i>
-                <span>Admin Logout</span>
-              </button>
-            )}
-            
-            {isAdminView ? (
-                 <button
-                    onClick={onSwitchToUserView}
-                    className="px-3 sm:px-4 py-1.5 sm:py-2 bg-transparent hover:bg-[var(--text-primary)] text-[var(--text-primary)] hover:text-[var(--bg-primary)] border border-[var(--text-primary)] rounded-md transition-colors shrink-0 text-xs sm:text-sm flex items-center"
-                    aria-label="Switch to User View"
-                  >
-                   <i className="fa-solid fa-user-graduate fa-fw mr-1.5 sm:mr-2"></i>
-                   <span>User View</span>
-                  </button>
-            ) : (
-                 <button
-                    onClick={onSwitchToAdminView}
-                    className="px-3 sm:px-4 py-1.5 sm:py-2 bg-transparent hover:bg-[var(--text-primary)] text-[var(--text-primary)] hover:text-[var(--bg-primary)] border border-[var(--text-primary)] rounded-md transition-colors shrink-0 text-xs sm:text-sm flex items-center"
-                    aria-label="Switch to Admin Panel"
-                 >
-                    <i className="fa-solid fa-headset mr-1.5 sm:mr-2"></i>
-                    <span>Admin Panel</span>
-                </button>
-            )}
-          </div>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+            {adminLogoutButton}
+            {viewToggleButton}
+            </div>
         </div>
-
+        
         <div style={{
             height: '1px',
             width: '100%',

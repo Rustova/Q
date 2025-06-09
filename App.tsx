@@ -9,12 +9,14 @@ import QuizSelectionView from './components/QuizSelectionView.tsx';
 import UserView from './components/UserView.tsx';
 import AdminView from './components/AdminView.tsx';
 import TimestampModal from './components/TimestampModal.tsx';
+import QuizPreferencesModal from './components/QuizPreferencesModal.tsx'; // New Modal
 import AppConfig, { PLACEHOLDER_GITHUB_DATA_URL } from './config.ts';
 
 // --- Constants ---
 const ADMIN_PASSWORD = "e2c841f407";
 const APP_NAME = "Q";
 const MAX_OPTIONS = 5;
+
 
 // --- Types ---
 interface Option {
@@ -48,7 +50,7 @@ export type { Option, Question, Quiz, Subject };
 // User Answer State
 export interface UserAnswer {
   selectedOptionId: string | null;
-  feedback: string | null;
+  feedback: 'Correct' | 'Incorrect' | 'Seen' | null; // Null can mean pending feedback for 'atEnd' mode
 }
 
 interface AppData {
@@ -56,19 +58,21 @@ interface AppData {
   subjects: Subject[];
 }
 
+// App View Management
+export type AppViewMode = 'SubjectSelection' | 'QuizSelection' | 'UserQuiz' | 'AdminPanel';
+
+// Quiz Correction Mode
+export type UserCorrectionMode = 'immediate' | 'atEnd';
+
+// Question Display Mode
+export type UserQuestionDisplayMode = 'oneByOne' | 'listed';
+
+
 // --- Utility Functions ---
 export function generateId() {
-  return Date.now().toString() + Math.random().toString(36).substring(2, 9);
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
 }
 
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffledArray = [...array];
-  for (let i = shuffledArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffledArray[i], shuffledArray[j]] = [shuffledArray[j], shuffledArray[i]];
-  }
-  return shuffledArray;
-}
 
 async function getFetchableGitHubContentUrl(configUrl: string): Promise<string | null> {
   if (!configUrl || configUrl === PLACEHOLDER_GITHUB_DATA_URL) {
@@ -106,9 +110,14 @@ async function getFetchableGitHubContentUrl(configUrl: string): Promise<string |
 
 const App: React.FC = () => {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => localStorage.getItem('isAdminAuthenticated') === 'true');
-  const [isAdminView, setIsAdminView] = useState(() => isAdminAuthenticated && localStorage.getItem('wasAdminViewBeforeRefresh') === 'true');
+  const [currentAppView, setCurrentAppView] = useState<AppViewMode>(() => {
+    if (localStorage.getItem('isAdminAuthenticated') === 'true' && localStorage.getItem('wasAdminViewBeforeRefresh') === 'true') {
+        return 'AdminPanel';
+    }
+    return 'SubjectSelection';
+  });
   
-  const [userProvidedPat, setUserProvidedPat] = useState<string>(() => localStorage.getItem('githubPat') || '');
+  const [adminGithubPat, setAdminGithubPat] = useState<string>(() => localStorage.getItem('githubPat') || '');
 
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -119,7 +128,7 @@ const App: React.FC = () => {
   const [selectedQuizForUser, setSelectedQuizForUser] = useState<Quiz | null>(null);
   const [showAdminLoginModal, setShowAdminLoginModal] = useState(false);
   const [showTimestampModal, setShowTimestampModal] = useState(false); 
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const [adminLoginError, setAdminLoginError] = useState<string | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -130,19 +139,33 @@ const App: React.FC = () => {
   const [userAnswers, setUserAnswers] = useState<Array<UserAnswer | null>>([]); 
   const [userQuizComplete, setUserQuizComplete] = useState(false);
 
+  // New states for quiz preferences
+  const [userCorrectionMode, setUserCorrectionMode] = useState<UserCorrectionMode>('immediate');
+  const [userQuestionDisplayMode, setUserQuestionDisplayMode] = useState<UserQuestionDisplayMode>('oneByOne');
+  const [showQuizPrefsModal, setShowQuizPrefsModal] = useState(false);
 
   const [showManageSubjectsSection, setShowManageSubjectsSection] = useState(true);
   const [showManageQuizzesSection, setShowManageQuizzesSection] = useState(true);
 
+  const [pdfAnimationShouldPlayOnSubjectViewLoad, setPdfAnimationShouldPlayOnSubjectViewLoad] = useState<boolean>(false);
+
+
   const fetchAttemptedRef = useRef(false);
 
   useEffect(() => {
-    if (userProvidedPat) {
-      localStorage.setItem('githubPat', userProvidedPat);
+    if (adminGithubPat) {
+      localStorage.setItem('githubPat', adminGithubPat);
     } else {
       localStorage.removeItem('githubPat');
     }
-  }, [userProvidedPat]);
+  }, [adminGithubPat]);
+  
+  useEffect(() => {
+    // Scroll to top when key views change
+    if (currentAppView === 'UserQuiz' || currentAppView === 'QuizSelection') {
+      window.scrollTo(0, 0);
+    }
+  }, [currentAppView]);
 
 
   const processLoadedData = (loadedData: any, source: 'remote' | 'local') => {
@@ -281,13 +304,15 @@ const App: React.FC = () => {
     setCurrentUserSelectionAttempt(null);
     setUserAnswers([]);
     setUserQuizComplete(false);
+    // UserCorrectionMode and UserQuestionDisplayMode are persisted, not reset here.
   };
   
   const handleSwitchToAdminView = () => {
-    setIsAdminView(true);
+    setCurrentAppView('AdminPanel');
     setSelectedSubjectForUser(null);
     setSelectedQuizForUser(null);
     resetUserQuizState();
+    setPdfAnimationShouldPlayOnSubjectViewLoad(false);
 
     if (isAdminAuthenticated) { 
         localStorage.setItem('wasAdminViewBeforeRefresh', 'true');
@@ -296,12 +321,15 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSwitchToUserView = () => {
-    setIsAdminView(false);
+  const handleSwitchToUserView = () => { // Switches to Subject Selection from Admin
+    setCurrentAppView('SubjectSelection');
     localStorage.removeItem('wasAdminViewBeforeRefresh');
     setActiveSubjectIdForAdminState(null);
     setActiveQuizIdForAdminState(null);
     setEditingQuestion(null);
+    // If returning from Admin, we might want the animation. Or maybe not.
+    // For now, let's assume direct admin->user doesn't trigger it unless explicitly returning from a quiz flow.
+    setPdfAnimationShouldPlayOnSubjectViewLoad(false); 
   };
 
 
@@ -309,31 +337,33 @@ const App: React.FC = () => {
     if (password === ADMIN_PASSWORD) {
       setIsAdminAuthenticated(true);
       localStorage.setItem('isAdminAuthenticated', 'true');
-      setIsAdminView(true); 
+      setCurrentAppView('AdminPanel'); 
       localStorage.setItem('wasAdminViewBeforeRefresh', 'true');
       setShowAdminLoginModal(false);
-      setLoginError(null);
+      setAdminLoginError(null);
     } else {
-      setLoginError("Incorrect password. Please try again.");
+      setAdminLoginError("Incorrect password. Please try again.");
     }
   };
 
   const handleAdminLogout = () => {
     setIsAdminAuthenticated(false);
     localStorage.removeItem('isAdminAuthenticated');
-    setIsAdminView(false); 
+    setCurrentAppView('SubjectSelection');
     localStorage.removeItem('wasAdminViewBeforeRefresh');
     setActiveSubjectIdForAdminState(null);
     setActiveQuizIdForAdminState(null);
     setEditingQuestion(null);
+    setPdfAnimationShouldPlayOnSubjectViewLoad(false);
   };
 
   const handleCloseAdminLoginModal = () => {
     setShowAdminLoginModal(false);
-    setLoginError(null);
+    setAdminLoginError(null);
     if (!isAdminAuthenticated) {
-      setIsAdminView(false); 
+      setCurrentAppView('SubjectSelection');
       localStorage.removeItem('wasAdminViewBeforeRefresh');
+      setPdfAnimationShouldPlayOnSubjectViewLoad(false);
     }
   };
 
@@ -341,15 +371,30 @@ const App: React.FC = () => {
     setShowTimestampModal(prev => !prev);
   };
 
+  const handleSetUserCorrectionMode = (mode: UserCorrectionMode) => {
+    setUserCorrectionMode(mode);
+    // Modal closure handled by handleSetUserQuestionDisplayMode or if only one pref set
+  };
+
+  const handleSetUserQuestionDisplayMode = (mode: UserQuestionDisplayMode) => {
+    setUserQuestionDisplayMode(mode);
+    setShowQuizPrefsModal(false); // Close modal after setting display mode
+  };
+
+
+  const handleToggleQuizPrefsModal = () => {
+    setShowQuizPrefsModal(prev => !prev);
+  };
+
   const setActiveSubjectIdForAdmin = (id: string | null) => {
     setActiveSubjectIdForAdminState(id);
-    setActiveQuizIdForAdminState(null); // Also reset active quiz when subject changes
+    setActiveQuizIdForAdminState(null); 
     setEditingQuestion(null);
   };
 
   const setActiveQuizIdForAdmin = (id: string | null) => {
     setActiveQuizIdForAdminState(id);
-    setEditingQuestion(null); // Also reset editing question when quiz changes
+    setEditingQuestion(null); 
   };
 
   const handleCreateSubject = (name: string) => {
@@ -367,24 +412,18 @@ const App: React.FC = () => {
   };
 
   const handleDeleteSubject = (id: string) => {
-    // When deleting a subject, set the active subject to the next one or null.
     setSubjects(prevSubjects => {
       const subjectIndex = prevSubjects.findIndex(s => s.id === id);
-      if (subjectIndex === -1) return prevSubjects; // Subject not found
-
+      if (subjectIndex === -1) return prevSubjects; 
       const newSubjects = prevSubjects.filter(s => s.id !== id);
-
-      if (activeSubjectIdForAdmin === id) { // If the deleted subject was active
+      if (activeSubjectIdForAdmin === id) { 
         if (newSubjects.length > 0) {
-          // Select the subject at the same index, or the new last subject if the deleted one was last
           const nextActiveIndex = Math.min(subjectIndex, newSubjects.length - 1);
-          setActiveSubjectIdForAdmin(newSubjects[nextActiveIndex].id); // This will also clear activeQuizId
+          setActiveSubjectIdForAdmin(newSubjects[nextActiveIndex].id); 
         } else {
-          setActiveSubjectIdForAdmin(null); // No subjects left, also clears activeQuizId
+          setActiveSubjectIdForAdmin(null); 
         }
       }
-      // If deleted subject wasn't active, activeSubjectIdForAdmin remains,
-      // unless it was changed by setActiveSubjectIdForAdmin(null) if list became empty.
       return newSubjects;
     });
   };
@@ -392,18 +431,14 @@ const App: React.FC = () => {
   const handleCreateQuiz = (subjectId: string, name: string) => {
     const targetSubject = subjects.find(s => s.id === subjectId);
     if (!targetSubject) {
-      console.error("Subject not found for creating quiz. This should not happen if UI is correct.");
       alert("Error: Could not find the subject to add the quiz to. Please try again.");
       return;
     }
-
     if (targetSubject.quizzes.some(q => q.name.toLowerCase() === name.toLowerCase())) {
       alert(`A quiz with the name "${name}" already exists in subject "${targetSubject.name}". Please choose a different name.`);
-      return; // Prevent quiz creation due to name conflict
+      return; 
     }
-
     const newQuiz: Quiz = { id: generateId(), name, questions: [], isStartable: true };
-    
     setSubjects(prevSubjects => 
       prevSubjects.map(s => 
         s.id === subjectId 
@@ -411,7 +446,6 @@ const App: React.FC = () => {
         : s
       )
     );
-    // After updating subjects, set the new quiz as active
     setActiveQuizIdForAdmin(newQuiz.id); 
   };
 
@@ -421,7 +455,7 @@ const App: React.FC = () => {
       if (s.id === subjectId) {
         if (s.quizzes.some(q => q.name.toLowerCase() === newName.toLowerCase() && q.id !== quizId)) {
             nameConflict = true;
-            return s; // Return subject unchanged to avoid partial update before alert
+            return s; 
         }
         return {
           ...s,
@@ -440,25 +474,19 @@ const App: React.FC = () => {
   };
 
   const handleDeleteQuiz = (subjectId: string, quizId: string) => {
-    // When deleting a quiz, set active quiz to the next one in the current subject or null.
     setSubjects(prevSubjects => prevSubjects.map(s => {
       if (s.id === subjectId) {
         const quizIndex = s.quizzes.findIndex(q => q.id === quizId);
-        if (quizIndex === -1) return s; // Quiz not found in this subject
-
+        if (quizIndex === -1) return s; 
         const newQuizzes = s.quizzes.filter(q => q.id !== quizId);
-
-        if (activeQuizIdForAdmin === quizId) { // If the deleted quiz was active
+        if (activeQuizIdForAdmin === quizId) { 
           if (newQuizzes.length > 0) {
-            // Select the quiz at the same index, or the new last quiz if the deleted one was last
             const nextActiveIndex = Math.min(quizIndex, newQuizzes.length - 1);
             setActiveQuizIdForAdmin(newQuizzes[nextActiveIndex].id);
           } else {
-            setActiveQuizIdForAdmin(null); // No quizzes left in this subject
+            setActiveQuizIdForAdmin(null); 
           }
         }
-        // If deleted quiz wasn't active, activeQuizIdForAdmin remains,
-        // unless it was changed by setActiveQuizIdForAdmin(null) if list became empty.
         return { ...s, quizzes: newQuizzes };
       }
       return s;
@@ -480,13 +508,9 @@ const App: React.FC = () => {
     const newQuestion: Question = { ...questionData, id: generateId() };
     if(newQuestion.type === 'mcq' && newQuestion.options) {
         newQuestion.options = newQuestion.options.map((opt, index) => ({...opt, id: `option-${generateId()}-${index}`}));
-
-        // Try to map correctOptionId based on text if original was an index-like string
         const correctOptTextFromPayload = questionData.options?.find(o => o.id === questionData.correctOptionId)?.text;
         const newCorrectOpt = newQuestion.options.find(o => o.text === correctOptTextFromPayload);
         newQuestion.correctOptionId = newCorrectOpt ? newCorrectOpt.id : undefined;
-
-        // Fallback for older index-based correctOptionId if text match fails
         if (!newQuestion.correctOptionId && typeof questionData.correctOptionId === 'string') {
              const originalIndexMatch = questionData.correctOptionId.match(/^option-(\d+)$/);
              if (originalIndexMatch && originalIndexMatch[1]) {
@@ -496,43 +520,32 @@ const App: React.FC = () => {
                  }
              }
         }
-        // Ensure a correct option is set if possible, default to first if none found and options exist
         if (!newQuestion.correctOptionId && newQuestion.options.length > 0) {
             console.warn("Could not determine correct option for new MCQ, defaulting to first option.");
             newQuestion.correctOptionId = newQuestion.options[0].id;
         }
-
     }
-
     setSubjects(prev => prev.map(s => s.id === subjectId ? {
       ...s,
       quizzes: s.quizzes.map(q => q.id === quizId ? { ...q, questions: [...q.questions, newQuestion] } : q)
     } : s));
-    setEditingQuestion(null); // Close form/modal if it was open for adding
+    setEditingQuestion(null); 
   };
 
   const handleUpdateQuestion = (subjectId: string, quizId: string, updatedQuestion: Question) => {
      if(updatedQuestion.type === 'mcq' && updatedQuestion.options) {
-        // Ensure options have unique IDs, generate if missing or not in expected format
         updatedQuestion.options = updatedQuestion.options.map((opt, index) => ({
             id: opt.id && opt.id.startsWith('option-') ? opt.id : `option-${generateId()}-${index}`,
             text: opt.text
         }));
-
-        // Re-evaluate correctOptionId if it doesn't match any new option IDs
-        // This logic tries to preserve correctness based on text if IDs changed, or original index
         if (typeof updatedQuestion.correctOptionId === 'string' && !updatedQuestion.options.find(o => o.id === updatedQuestion.correctOptionId)) {
-            // Try to find based on text using the 'editingQuestion' state (original question before edits)
-            const originalCorrectOptionData = editingQuestion?.options?.find(o => o.id === updatedQuestion.correctOptionId); // This was the selected correct option's data
+            const originalCorrectOptionData = editingQuestion?.options?.find(o => o.id === updatedQuestion.correctOptionId); 
             const correctOptTextFromOriginal = originalCorrectOptionData?.text;
-            
             let newCorrectOpt = updatedQuestion.options.find(o => o.text === correctOptTextFromOriginal);
-
             if (newCorrectOpt) {
                 updatedQuestion.correctOptionId = newCorrectOpt.id;
             } else {
-                 // Fallback for older index-based correctOptionId if text match fails or original was index
-                 const originalIndexMatch = updatedQuestion.correctOptionId.match(/^option-(\d+)$/); // Check if it was an old index based ID
+                 const originalIndexMatch = updatedQuestion.correctOptionId.match(/^option-(\d+)$/); 
                  if (originalIndexMatch && originalIndexMatch[1]) {
                      const originalIndex = parseInt(originalIndexMatch[1], 10);
                      if (updatedQuestion.options[originalIndex]) {
@@ -547,14 +560,11 @@ const App: React.FC = () => {
                  }
             }
         }
-        // Final check: if still no valid correctOptionId for an MCQ with options, default to first.
         if (updatedQuestion.type === 'mcq' && updatedQuestion.options.length > 0 && !updatedQuestion.options.find(opt => opt.id === updatedQuestion.correctOptionId)) {
             console.warn("Updated MCQ question has options, but correctOptionId is invalid. Defaulting to the first option.");
             updatedQuestion.correctOptionId = updatedQuestion.options[0].id;
         }
     }
-
-
     setSubjects(prev => prev.map(s => s.id === subjectId ? {
       ...s,
       quizzes: s.quizzes.map(q => q.id === quizId ? {
@@ -562,7 +572,7 @@ const App: React.FC = () => {
         questions: q.questions.map(ques => ques.id === updatedQuestion.id ? updatedQuestion : ques)
       } : q)
     } : s));
-    setEditingQuestion(null); // Close form/modal after update
+    setEditingQuestion(null); 
   };
 
   const handleDeleteQuestion = (subjectId: string, quizId: string, questionId: string) => {
@@ -574,7 +584,7 @@ const App: React.FC = () => {
       } : q)
     } : s));
     if (editingQuestion?.id === questionId) {
-      setEditingQuestion(null); // If the deleted question was being edited, clear editing state
+      setEditingQuestion(null); 
     }
   };
 
@@ -595,11 +605,31 @@ const App: React.FC = () => {
     }));
   };
 
+  const handleReorderAllQuizzesByTypeGlobal = () => {
+    setSubjects(prevSubjects =>
+      prevSubjects.map(subject => ({
+        ...subject,
+        quizzes: subject.quizzes.map(quiz => {
+          const writtenQuestions = quiz.questions.filter(q => q.type === 'written');
+          const mcqQuestions = quiz.questions.filter(q => q.type === 'mcq');
+          return {
+            ...quiz,
+            questions: [...writtenQuestions, ...mcqQuestions],
+          };
+        }),
+      }))
+    );
+    alert("All quizzes have been successfully reordered (Written questions first, then MCQ).");
+  };
+
+
   const handleSelectSubjectForUser = (subjectId: string) => {
     const subject = subjects.find(s => s.id === subjectId);
     setSelectedSubjectForUser(subject || null);
-    setSelectedQuizForUser(null); // Reset quiz selection when subject changes
+    setSelectedQuizForUser(null); 
     resetUserQuizState();
+    setCurrentAppView('QuizSelection');
+    setPdfAnimationShouldPlayOnSubjectViewLoad(false); // Don't play when going forward
   };
 
   const handleSelectQuizForUser = (quizId: string) => {
@@ -607,19 +637,23 @@ const App: React.FC = () => {
     setSelectedQuizForUser(quiz || null);
     resetUserQuizState(); 
     if (quiz) {
-      setUserAnswers(Array(quiz.questions.length).fill(null)); // Initialize answers array
+      setUserAnswers(Array(quiz.questions.length).fill(null)); 
     }
+    setCurrentAppView('UserQuiz');
   };
 
   const handleBackToSubjectListFromQuizList = () => {
     setSelectedSubjectForUser(null);
     setSelectedQuizForUser(null);
     resetUserQuizState();
+    setCurrentAppView('SubjectSelection');
+    setPdfAnimationShouldPlayOnSubjectViewLoad(true); // Trigger animation on return
   };
 
   const handleBackToQuizListFromUserView = () => {
     setSelectedQuizForUser(null);
     resetUserQuizState();
+    setCurrentAppView('QuizSelection');
   };
   
   const handleRestartQuiz = () => {
@@ -629,30 +663,49 @@ const App: React.FC = () => {
     }
   };
 
-
+  // For 'oneByOne' display mode
   const handleUserOptionSelect = (optionId: string) => {
-    // Allow selection only if current question is not yet answered
-    if (selectedQuizForUser && userAnswers[userCurrentQuestionIndex] === null) {
-      setCurrentUserSelectionAttempt(optionId);
+    setCurrentUserSelectionAttempt(optionId);
+    if (selectedQuizForUser && userCorrectionMode === 'atEnd') {
+      const currentQuestion = selectedQuizForUser.questions[userCurrentQuestionIndex];
+      if (currentQuestion.type === 'mcq') {
+        const newAnswers = [...userAnswers];
+        newAnswers[userCurrentQuestionIndex] = {
+          selectedOptionId: optionId,
+          feedback: null, 
+        };
+        setUserAnswers(newAnswers);
+      }
+    }
+  };
+  
+  // For 'listed' display mode
+  const handleListedQuestionOptionSelect = (optionId: string, questionIndex: number) => {
+    if (selectedQuizForUser) {
+      const question = selectedQuizForUser.questions[questionIndex];
+      if (question.type === 'mcq') {
+        const newAnswers = [...userAnswers];
+        let feedbackValue: UserAnswer['feedback'] = null;
+        if (userCorrectionMode === 'immediate') {
+          feedbackValue = optionId === question.correctOptionId ? 'Correct' : 'Incorrect';
+        }
+        newAnswers[questionIndex] = { selectedOptionId: optionId, feedback: feedbackValue };
+        setUserAnswers(newAnswers);
+      }
     }
   };
 
+
   const handleUserSubmitAnswer = () => { 
-    if (selectedQuizForUser && userAnswers[userCurrentQuestionIndex] === null) {
+    if (selectedQuizForUser && userCorrectionMode === 'immediate' && userAnswers[userCurrentQuestionIndex] === null) {
       const currentQuestion = selectedQuizForUser.questions[userCurrentQuestionIndex];
-      
       if (currentQuestion.type === 'mcq') {
         if (!currentUserSelectionAttempt) {
-            // This case should ideally be prevented by disabling submit button
             console.warn("Submit called for MCQ without a selection attempt.");
             return; 
         }
-        let feedbackText: string | null = null;
-        if (currentUserSelectionAttempt === currentQuestion.correctOptionId) {
-          feedbackText = 'Correct';
-        } else {
-          feedbackText = 'Incorrect';
-        }
+        const feedbackText: UserAnswer['feedback'] = currentUserSelectionAttempt === currentQuestion.correctOptionId ? 'Correct' : 'Incorrect';
+        
         const newAnswers = [...userAnswers];
         newAnswers[userCurrentQuestionIndex] = {
           selectedOptionId: currentUserSelectionAttempt,
@@ -660,55 +713,109 @@ const App: React.FC = () => {
         };
         setUserAnswers(newAnswers);
       }
-      // For 'written' type, submission is handled implicitly by moving to next question
-      // Or by a dedicated submit if that was designed (currently not)
     }
   };
   
-  const handleUserNextQuestion = () => {
-    // If current question is 'written' and not yet "answered" (marked as seen), mark it now
+  const handleUserNextQuestion = () => { 
     if (selectedQuizForUser) {
       const currentQuestion = selectedQuizForUser.questions[userCurrentQuestionIndex];
-      if (currentQuestion.type === 'written' && userAnswers[userCurrentQuestionIndex] === null) {
+      
+      if (userQuestionDisplayMode === 'oneByOne' && currentQuestion?.type === 'written' && userAnswers[userCurrentQuestionIndex] === null) {
         const newAnswers = [...userAnswers];
-        newAnswers[userCurrentQuestionIndex] = { selectedOptionId: null, feedback: 'Seen' }; // Mark as seen
+        const writtenSeenAnswer: UserAnswer = { selectedOptionId: null, feedback: 'Seen' };
+        newAnswers[userCurrentQuestionIndex] = writtenSeenAnswer; 
+        setUserAnswers(newAnswers);
+      }
+      else if (userQuestionDisplayMode === 'oneByOne' && userCorrectionMode === 'atEnd' && currentQuestion?.type === 'mcq' &&
+               currentUserSelectionAttempt && userAnswers[userCurrentQuestionIndex] === null) {
+        const newAnswers = [...userAnswers];
+        const mcqAnswer: UserAnswer = {
+          selectedOptionId: currentUserSelectionAttempt,
+          feedback: null,
+        };
+        newAnswers[userCurrentQuestionIndex] = mcqAnswer;
         setUserAnswers(newAnswers);
       }
     }
-    
-    setCurrentUserSelectionAttempt(null); // Clear selection attempt for next question
-    if (selectedQuizForUser && userCurrentQuestionIndex < selectedQuizForUser.questions.length - 1) {
+
+    setCurrentUserSelectionAttempt(null); 
+    const isLastQuestionInOneByOne = userQuestionDisplayMode === 'oneByOne' && selectedQuizForUser && userCurrentQuestionIndex >= selectedQuizForUser.questions.length - 1;
+    const isFinishingInListedMode = userQuestionDisplayMode === 'listed';
+
+    if (isLastQuestionInOneByOne || isFinishingInListedMode) { 
+      if (userCorrectionMode === 'atEnd' && selectedQuizForUser) {
+        const finalAnswers = userAnswers.map((ans, idx) => {
+          if (!ans && selectedQuizForUser.questions[idx].type === 'written') {
+            const writtenSeenFinalAnswer: UserAnswer = { selectedOptionId: null, feedback: 'Seen' };
+            return writtenSeenFinalAnswer;
+          }
+          if (!ans) return null; 
+          
+          const question = selectedQuizForUser.questions[idx];
+          if (question.type === 'mcq' && ans.selectedOptionId && ans.feedback === null) {
+            const feedbackValue: 'Correct' | 'Incorrect' = ans.selectedOptionId === question.correctOptionId ? 'Correct' : 'Incorrect';
+            const mcqGradedFinalAnswer: UserAnswer = {
+              selectedOptionId: ans.selectedOptionId,
+              feedback: feedbackValue,
+            };
+            return mcqGradedFinalAnswer;
+          }
+          return ans; 
+        });
+        setUserAnswers(finalAnswers);
+      } else if (userCorrectionMode === 'immediate' && isFinishingInListedMode && selectedQuizForUser) {
+         const finalAnswers = userAnswers.map((ans, idx) => {
+            if (!ans && selectedQuizForUser.questions[idx].type === 'written') {
+                const writtenSeenFinalAnswerImmediate: UserAnswer = {selectedOptionId: null, feedback: 'Seen'};
+                return writtenSeenFinalAnswerImmediate;
+            }
+            return ans;
+         });
+         setUserAnswers(finalAnswers);
+      }
+      setUserQuizComplete(true); 
+    } else if (userQuestionDisplayMode === 'oneByOne' && selectedQuizForUser && userCurrentQuestionIndex < selectedQuizForUser.questions.length - 1) {
       setUserCurrentQuestionIndex(prevIndex => prevIndex + 1);
-    } else {
-      setUserQuizComplete(true); // Reached end of quiz
     }
   };
   
-  const handleUserPreviousQuestion = () => {
-    setCurrentUserSelectionAttempt(null); // Clear selection attempt when moving
+  const handleUserPreviousQuestion = () => { 
+     if (selectedQuizForUser && userCorrectionMode === 'atEnd' && userQuestionDisplayMode === 'oneByOne') {
+        const currentQuestion = selectedQuizForUser.questions[userCurrentQuestionIndex];
+        if (currentQuestion.type === 'mcq' && currentUserSelectionAttempt && userAnswers[userCurrentQuestionIndex] === null) {
+            const newAnswers = [...userAnswers];
+            const mcqAnswer: UserAnswer = {
+                selectedOptionId: currentUserSelectionAttempt,
+                feedback: null,
+            };
+            newAnswers[userCurrentQuestionIndex] = mcqAnswer;
+            setUserAnswers(newAnswers);
+        }
+    }
+    setCurrentUserSelectionAttempt(null); 
     if (userCurrentQuestionIndex > 0) {
       setUserCurrentQuestionIndex(prevIndex => prevIndex - 1);
     }
   };
 
-  // Derived state for admin view context titles
   const activeAdminSubject = subjects.find(s => s.id === activeSubjectIdForAdmin);
   const activeAdminQuiz = activeAdminSubject?.quizzes.find(q => q.id === activeQuizIdForAdmin);
   
-  // Contextual title for the header
   let contextTitle = APP_NAME;
-  if (isAdminView) {
+  const isAdminPanelActive = currentAppView === 'AdminPanel' && isAdminAuthenticated;
+
+  if (isAdminPanelActive) {
     contextTitle = activeAdminQuiz
       ? `Admin: ${activeAdminSubject?.name || 'Unknown Subject'} > ${activeAdminQuiz.name}`
       : activeAdminSubject
         ? `Admin: ${activeAdminSubject.name}`
         : "Admin: Subject Management";
-  } else { // User view
-    contextTitle = selectedQuizForUser
-      ? `${selectedSubjectForUser?.name || 'Quiz'}: ${selectedQuizForUser.name}`
-      : selectedSubjectForUser
-        ? `${selectedSubjectForUser.name}: Select Quiz`
-        : APP_NAME; // Default to App Name if no subject selected by user
+  } else if (currentAppView === 'UserQuiz' && selectedQuizForUser) {
+    contextTitle = `${selectedSubjectForUser?.name || 'Quiz'}: ${selectedQuizForUser.name}`;
+  } else if (currentAppView === 'QuizSelection' && selectedSubjectForUser) {
+    contextTitle = `${selectedSubjectForUser.name}: Select Quiz`;
+  } else { // SubjectSelection or default
+    contextTitle = APP_NAME; 
   }
 
 
@@ -741,15 +848,111 @@ const App: React.FC = () => {
     );
   }
 
-  const isQuizTakingFlowActive = !isAdminView && (selectedSubjectForUser || selectedQuizForUser);
+  const isQuizTakingFlowActive = currentAppView === 'UserQuiz' || currentAppView === 'QuizSelection';
   const mainContentClasses = `flex-grow p-4 sm:p-6 lg:p-8 max-w-5xl w-full mx-auto ${isQuizTakingFlowActive ? "pt-4 sm:pt-6" : "pt-2 sm:pt-3"}`;
+
+  const renderCurrentView = () => {
+    switch (currentAppView) {
+      case 'AdminPanel':
+        if (isAdminAuthenticated) {
+          return (
+            <AdminView
+              subjects={subjects}
+              allSubjectsData={subjects}
+              activeSubjectId={activeSubjectIdForAdmin}
+              activeQuizId={activeQuizIdForAdmin}
+              editingQuestion={editingQuestion}
+              setEditingQuestion={handleSetEditingQuestion}
+              onSetActiveSubjectId={setActiveSubjectIdForAdmin}
+              onCreateSubject={handleCreateSubject}
+              onUpdateSubjectName={handleUpdateSubjectName}
+              onDeleteSubject={handleDeleteSubject}
+              onSetActiveQuizId={setActiveQuizIdForAdmin}
+              onCreateQuiz={handleCreateQuiz}
+              onUpdateQuizName={handleUpdateQuizName}
+              onDeleteQuiz={handleDeleteQuiz}
+              onToggleQuizStartable={handleToggleQuizStartable}
+              onAddQuestion={handleAddQuestion}
+              onUpdateQuestion={handleUpdateQuestion}
+              onDeleteQuestion={handleDeleteQuestion}
+              onReorderQuestions={handleReorderQuestions}
+              onReorderAllQuizzesByTypeGlobal={handleReorderAllQuizzesByTypeGlobal}
+              maxOptions={MAX_OPTIONS}
+              showManageSubjectsSection={showManageSubjectsSection}
+              setShowManageSubjectsSection={setShowManageSubjectsSection}
+              showManageQuizzesSection={showManageQuizzesSection}
+              setShowManageQuizzesSection={setShowManageQuizzesSection}
+              activeAdminSubject={activeAdminSubject}
+              activeAdminQuiz={activeAdminQuiz}
+              githubPat={adminGithubPat}
+              setGithubPat={setAdminGithubPat}
+            />
+          );
+        }
+        return <SubjectSelectionView 
+                  subjects={subjects} 
+                  onSelectSubject={handleSelectSubjectForUser} 
+                  playAnimation={pdfAnimationShouldPlayOnSubjectViewLoad}
+                  onAnimationComplete={() => setPdfAnimationShouldPlayOnSubjectViewLoad(false)}
+                />;
+      
+      case 'UserQuiz':
+        if (selectedQuizForUser) {
+          return (
+            <UserView
+              quiz={selectedQuizForUser}
+              currentQuestionIndex={userCurrentQuestionIndex}
+              userAnswers={userAnswers}
+              currentUserSelectionAttempt={currentUserSelectionAttempt}
+              isQuizComplete={userQuizComplete}
+              onOptionSelect={handleUserOptionSelect} // For oneByOne mode
+              onListedOptionSelect={handleListedQuestionOptionSelect} // For listed mode
+              onSubmitAnswer={handleUserSubmitAnswer} // For oneByOne immediate mode
+              onNextQuestion={handleUserNextQuestion} // For oneByOne navigation and finishing quiz
+              onPreviousQuestion={handleUserPreviousQuestion} // For oneByOne navigation
+              onBackToQuizList={handleBackToQuizListFromUserView}
+              onRestartQuiz={handleRestartQuiz}
+              userCorrectionMode={userCorrectionMode}
+              userQuestionDisplayMode={userQuestionDisplayMode}
+              onTogglePrefsModal={handleToggleQuizPrefsModal}
+            />
+          );
+        }
+        setCurrentAppView('QuizSelection'); 
+        return null; 
+
+      case 'QuizSelection':
+        if (selectedSubjectForUser) {
+          return (
+            <QuizSelectionView
+              subject={selectedSubjectForUser}
+              onSelectQuiz={handleSelectQuizForUser}
+              onBackToSubjectList={handleBackToSubjectListFromQuizList}
+            />
+          );
+        }
+        setCurrentAppView('SubjectSelection');
+        return null;
+
+      case 'SubjectSelection':
+      default:
+        return <SubjectSelectionView 
+                subjects={subjects} 
+                onSelectSubject={handleSelectSubjectForUser} 
+                playAnimation={pdfAnimationShouldPlayOnSubjectViewLoad}
+                onAnimationComplete={() => setPdfAnimationShouldPlayOnSubjectViewLoad(false)}
+              />;
+    }
+  };
+
 
   return (
     <>
       <Header 
         contextTitle={contextTitle} 
-        isAdminView={isAdminView}
+        isAdminView={isAdminPanelActive}
         isAdminAuthenticated={isAdminAuthenticated}
+        currentAppViewMode={currentAppView}
         onSwitchToAdminView={handleSwitchToAdminView}
         onSwitchToUserView={handleSwitchToUserView}
         onAdminLogout={handleAdminLogout}
@@ -757,79 +960,14 @@ const App: React.FC = () => {
         onShowTimestampModal={handleToggleTimestampModal}
       />
       <main className={mainContentClasses}>
-        {isAdminView && isAdminAuthenticated ? (
-          <AdminView
-            subjects={subjects} // Pass all subjects, AdminView can filter if needed or use active IDs
-            activeSubjectId={activeSubjectIdForAdmin}
-            activeQuizId={activeQuizIdForAdmin}
-            editingQuestion={editingQuestion}
-            setEditingQuestion={handleSetEditingQuestion}
-            onSetActiveSubjectId={setActiveSubjectIdForAdmin}
-            onCreateSubject={handleCreateSubject}
-            onUpdateSubjectName={handleUpdateSubjectName}
-            onDeleteSubject={handleDeleteSubject}
-            onSetActiveQuizId={setActiveQuizIdForAdmin}
-            onCreateQuiz={handleCreateQuiz}
-            onUpdateQuizName={handleUpdateQuizName}
-            onDeleteQuiz={handleDeleteQuiz}
-            onToggleQuizStartable={handleToggleQuizStartable}
-            onAddQuestion={handleAddQuestion}
-            onUpdateQuestion={handleUpdateQuestion}
-            onDeleteQuestion={handleDeleteQuestion}
-            onReorderQuestions={handleReorderQuestions}
-            maxOptions={MAX_OPTIONS}
-            showManageSubjectsSection={showManageSubjectsSection}
-            setShowManageSubjectsSection={setShowManageSubjectsSection}
-            showManageQuizzesSection={showManageQuizzesSection}
-            setShowManageQuizzesSection={setShowManageQuizzesSection}
-            activeAdminSubject={activeAdminSubject} // Pass derived active subject
-            activeAdminQuiz={activeAdminQuiz}     // Pass derived active quiz
-            githubPat={userProvidedPat}
-            setGithubPat={setUserProvidedPat}
-            allSubjectsData={subjects} // For saving all data
-          />
-        ) : !isAdminView ? ( // User View Logic
-            selectedQuizForUser ? (
-              <UserView
-                quiz={selectedQuizForUser}
-                currentQuestionIndex={userCurrentQuestionIndex}
-                userAnswers={userAnswers}
-                currentUserSelectionAttempt={currentUserSelectionAttempt}
-                isQuizComplete={userQuizComplete}
-                onOptionSelect={handleUserOptionSelect}
-                onSubmitAnswer={handleUserSubmitAnswer}
-                onNextQuestion={handleUserNextQuestion}
-                onPreviousQuestion={handleUserPreviousQuestion}
-                onBackToQuizList={handleBackToQuizListFromUserView}
-                onRestartQuiz={handleRestartQuiz}
-              />
-            ) : selectedSubjectForUser ? (
-              <QuizSelectionView
-                subject={selectedSubjectForUser}
-                onSelectQuiz={handleSelectQuizForUser}
-                onBackToSubjectList={handleBackToSubjectListFromQuizList}
-              />
-            ) : (
-              <SubjectSelectionView 
-                subjects={subjects} 
-                onSelectSubject={handleSelectSubjectForUser} 
-              />
-            )
-        ) : (
-           // Fallback for unexpected state (e.g. admin view but not authenticated after refresh/direct nav), show SubjectSelectionView
-           // This ensures users always see something functional.
-           <SubjectSelectionView 
-             subjects={subjects} 
-             onSelectSubject={handleSelectSubjectForUser} 
-           />
-        )}
+        {renderCurrentView()}
       </main>
       <Footer appName={APP_NAME} />
       {showAdminLoginModal && (
         <AdminLoginModal
           onLogin={handleAdminLogin}
           onClose={handleCloseAdminLoginModal}
-          error={loginError}
+          error={adminLoginError}
         />
       )}
       {showTimestampModal && dataTimestamp && (
@@ -837,6 +975,16 @@ const App: React.FC = () => {
           isOpen={showTimestampModal}
           onClose={handleToggleTimestampModal}
           timestamp={dataTimestamp}
+        />
+      )}
+      {showQuizPrefsModal && (
+        <QuizPreferencesModal
+          isOpen={showQuizPrefsModal}
+          onClose={handleToggleQuizPrefsModal}
+          currentCorrectionMode={userCorrectionMode}
+          onSetCorrectionMode={handleSetUserCorrectionMode}
+          currentQuestionDisplayMode={userQuestionDisplayMode}
+          onSetQuestionDisplayMode={handleSetUserQuestionDisplayMode}
         />
       )}
     </>

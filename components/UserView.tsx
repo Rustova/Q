@@ -1,20 +1,24 @@
 
-import React from 'react';
-import type { Quiz, UserAnswer, Question as QuestionType, Option } from '../App.tsx'; 
+import React, { useState, useEffect } from 'react';
+import type { Quiz, UserAnswer, Question as QuestionType, Option, UserCorrectionMode, UserQuestionDisplayMode } from '../App.tsx'; 
 import QuestionDisplay from './QuestionDisplay.tsx';
 
 interface UserViewProps {
   quiz: Quiz;
-  currentQuestionIndex: number;
+  currentQuestionIndex: number; // Used for 'oneByOne' mode
   userAnswers: Array<UserAnswer | null>; 
-  currentUserSelectionAttempt: string | null; 
+  currentUserSelectionAttempt: string | null; // Used for 'oneByOne' mode
   isQuizComplete: boolean;
-  onOptionSelect: (optionId: string) => void;
-  onSubmitAnswer: () => void;
-  onNextQuestion: () => void;
-  onPreviousQuestion: () => void; 
+  onOptionSelect: (optionId: string) => void; // For 'oneByOne' mode
+  onListedOptionSelect: (optionId: string, questionIndex: number) => void; // For 'listed' mode
+  onSubmitAnswer: () => void; // For 'oneByOne' immediate mode
+  onNextQuestion: () => void; // For 'oneByOne' navigation and finishing quiz (both modes)
+  onPreviousQuestion: () => void; // For 'oneByOne' navigation
   onBackToQuizList: () => void;
   onRestartQuiz: () => void;
+  userCorrectionMode: UserCorrectionMode;
+  userQuestionDisplayMode: UserQuestionDisplayMode;
+  onTogglePrefsModal: () => void;
 }
 
 const UserView: React.FC<UserViewProps> = ({
@@ -24,61 +28,79 @@ const UserView: React.FC<UserViewProps> = ({
   currentUserSelectionAttempt,
   isQuizComplete,
   onOptionSelect,
+  onListedOptionSelect,
   onSubmitAnswer,
   onNextQuestion,
   onPreviousQuestion,
   onBackToQuizList,
   onRestartQuiz,
+  userCorrectionMode,
+  userQuestionDisplayMode,
+  onTogglePrefsModal,
 }) => {
-  const currentQuestion = quiz.questions[currentQuestionIndex];
-  const currentQuestionAnswer = userAnswers[currentQuestionIndex];
-  const isCurrentQuestionAnswered = currentQuestionAnswer !== null;
-  const isMcq = currentQuestion?.type === 'mcq';
+  const [animateSettingsIcon, setAnimateSettingsIcon] = useState(true);
 
-  const displaySelectedOptionId = isCurrentQuestionAnswered
-    ? currentQuestionAnswer.selectedOptionId
+  useEffect(() => {
+    setAnimateSettingsIcon(true); // Trigger animation
+    const timer = setTimeout(() => {
+      setAnimateSettingsIcon(false); // Remove class after animation duration
+    }, 1200); // Duration of the animation in ms
+
+    return () => clearTimeout(timer); // Cleanup timer on unmount or if quiz.id changes
+  }, [quiz.id]); // Re-trigger animation if the quiz itself changes
+
+
+  // --- Logic for 'oneByOne' display mode ---
+  const currentQuestionOneByOne = userQuestionDisplayMode === 'oneByOne' ? quiz.questions[currentQuestionIndex] : null;
+  const currentQuestionAnswerObjectOneByOne = userQuestionDisplayMode === 'oneByOne' ? userAnswers[currentQuestionIndex] : null;
+  const isMcqOneByOne = currentQuestionOneByOne?.type === 'mcq';
+
+  const questionHasBeenAttemptedOneByOne = currentQuestionAnswerObjectOneByOne != null;
+  const questionHasBeenGradedOneByOne = currentQuestionAnswerObjectOneByOne !== null && currentQuestionAnswerObjectOneByOne.feedback !== null;
+
+  const questionDisplayIsSubmittedOneByOne: boolean = 
+    userCorrectionMode === 'immediate' 
+        ? questionHasBeenGradedOneByOne
+        : isQuizComplete;
+
+  const displaySelectedOptionIdOneByOne = questionHasBeenAttemptedOneByOne
+    ? currentQuestionAnswerObjectOneByOne.selectedOptionId
     : currentUserSelectionAttempt;
-  const displayFeedback = isCurrentQuestionAnswered ? currentQuestionAnswer.feedback : null;
   
-  const progressPercent = quiz.questions.length > 0 
+  const feedbackTextForHeaderOneByOne = (userCorrectionMode === 'immediate' || isQuizComplete) && questionHasBeenGradedOneByOne 
+    ? currentQuestionAnswerObjectOneByOne.feedback 
+    : null;
+  
+  const progressPercent = quiz.questions.length > 0 && userQuestionDisplayMode === 'oneByOne'
     ? ((currentQuestionIndex + 1) / quiz.questions.length) * 100 
     : 0;
 
-  // --- Updated Navigation Logic ---
-  const showPreviousIconButton = !isQuizComplete && currentQuestionIndex > 0;
-  const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;
+  const showPreviousIconButton = !isQuizComplete && currentQuestionIndex > 0 && userQuestionDisplayMode === 'oneByOne';
+  const isLastQuestionInOneByOneMode = userQuestionDisplayMode === 'oneByOne' && currentQuestionIndex === quiz.questions.length - 1;
   
-  // Visibility of the Next icon button (becomes Finish on last question)
-  const showNextOrFinishIconButton = !isQuizComplete && currentQuestion;
+  const showNextOrFinishIconButtonOneByOne = !isQuizComplete && currentQuestionOneByOne && userQuestionDisplayMode === 'oneByOne';
 
-  // Central Submit Button for MCQs
-  const showCentralSubmitButton = !isQuizComplete && currentQuestion && isMcq && !isCurrentQuestionAnswered;
-  const isCentralSubmitButtonDisabled = currentUserSelectionAttempt === null;
+  const showCentralSubmitButtonOneByOne = !isQuizComplete && 
+                                  currentQuestionOneByOne && 
+                                  isMcqOneByOne && 
+                                  !questionHasBeenGradedOneByOne && 
+                                  userCorrectionMode === 'immediate' &&
+                                  userQuestionDisplayMode === 'oneByOne';
 
-  // Next or Finish Icon Button disabled state: Disabled if an unsubmitted MCQ is showing
-  const isNextOrFinishIconDisabled = showCentralSubmitButton;
+  const isCentralSubmitButtonDisabledOneByOne = currentUserSelectionAttempt === null;
+  const isNextOrFinishIconDisabledOneByOne = userCorrectionMode === 'immediate' && showCentralSubmitButtonOneByOne;
+  // --- End Logic for 'oneByOne' ---
 
 
-  const handleNextIconClick = () => {
-    if (isQuizComplete || !currentQuestion) return;
-    // Submission is now handled by the central button for MCQs
+  const handleNextIconClick = () => { // Used by both modes to finish, oneByOne for next
+    if (isQuizComplete && userQuestionDisplayMode === 'oneByOne' && !currentQuestionOneByOne) return;
     onNextQuestion();
   };
   
   const iconButtonBaseClass = "p-3 text-[var(--accent-primary)] transition-colors rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] disabled:opacity-40 disabled:cursor-not-allowed";
   const centralSubmitButtonClass = "px-10 py-4 sm:px-12 sm:py-4 text-[var(--btn-primary-text)] bg-[var(--accent-primary)] transition-colors rounded-lg shadow-sm border border-[var(--accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] disabled:opacity-40 disabled:cursor-not-allowed";
-  // --- End Updated Navigation Logic ---
+  const finishQuizButtonListedModeClass = "w-full sm:w-auto mt-8 px-8 py-3 text-lg font-semibold text-[var(--btn-primary-text)] bg-[var(--accent-primary)] hover:bg-[var(--accent-primary-hover)] transition-colors rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]";
 
-
-  const getResults = () => {
-    let correctMcqCount = 0;
-    userAnswers.forEach((answer, index) => {
-      if (answer && quiz.questions[index].type === 'mcq' && answer.feedback === 'Correct') {
-        correctMcqCount++;
-      }
-    });
-    return { correctMcqCount };
-  };
 
   const renderResults = () => {
     return (
@@ -89,18 +111,21 @@ const UserView: React.FC<UserViewProps> = ({
         
         <div className="space-y-4 max-h-[calc(55vh+5rem)] sm:max-h-[calc(55vh+3rem)] overflow-y-auto pr-2 custom-scrollbar">
           {quiz.questions.map((q, index) => {
-            const userAnswer = userAnswers[index];
+            const userAnswer = userAnswers[index]; 
             
             return (
               <div key={q.id} className="p-3 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md shadow-sm">
                 <p className="text-md font-semibold text-[var(--text-primary)] mb-2 whitespace-pre-wrap">
                   {index + 1}. {q.questionText} <span className="text-xs text-[var(--accent-secondary)]">({q.type.toUpperCase()})</span>
                 </p>
-                {q.type === 'mcq' && userAnswer && q.options && (
+                {q.type === 'mcq' && q.options && (
                   <div className="text-sm space-y-2 mt-1">
+                    {!userAnswer?.selectedOptionId && q.type === 'mcq' && ( 
+                       <p className="text-sm text-[var(--accent-amber)] italic mb-1.5">You did not answer this question.</p>
+                    )}
                     <ul className="space-y-1.5">
                       {q.options.map((option, optionIndex) => {
-                        const isUserSelected = userAnswer.selectedOptionId === option.id;
+                        const isUserSelected = userAnswer ? userAnswer.selectedOptionId === option.id : false;
                         const isCorrect = q.correctOptionId === option.id;
                         const optionLetter = String.fromCharCode(65 + optionIndex);
 
@@ -139,7 +164,9 @@ const UserView: React.FC<UserViewProps> = ({
                   </div>
                 )}
                 {q.type === 'written' && (
-                  <p className="text-sm text-[var(--text-secondary)] italic mt-1">This is a written response question.</p>
+                  (userAnswer?.feedback === 'Seen' || (isQuizComplete && !userAnswer))
+                  ? <p className="text-sm text-[var(--text-secondary)] italic mt-1">You viewed this written response question.</p>
+                  : <p className="text-sm text-[var(--text-secondary)] italic mt-1">This is a written response question.</p> 
                 )}
               </div>
             );
@@ -175,20 +202,16 @@ const UserView: React.FC<UserViewProps> = ({
           >
             &larr; Back to Quiz List
           </button>
-          
-          <h2 
-            className="text-2xl sm:text-3xl font-semibold text-[var(--accent-primary)] truncate flex-grow text-center px-2"
-            title={quiz.name}
-          >
-            {quiz.name}
-          </h2>
-
-          <div 
-            className="px-4 py-2 font-semibold rounded-md text-xs sm:text-sm shrink-0 invisible"
-            aria-hidden="true"
-          >
-            &larr; Back to Quiz List
-          </div>
+          {!isQuizComplete && (
+             <button 
+                onClick={onTogglePrefsModal} 
+                className="text-[var(--text-secondary)] hover:text-[var(--accent-primary)] focus:outline-none p-1 rounded-full mx-2"
+                aria-label="Quiz Preferences"
+                title="Quiz Preferences"
+              >
+               <i className={`fa-solid fa-gear text-base ${animateSettingsIcon ? 'animate-settings-init' : ''}`}></i>
+             </button>
+          )}
         </div>
       )}
 
@@ -198,14 +221,15 @@ const UserView: React.FC<UserViewProps> = ({
         </div>
       ) : isQuizComplete ? (
         renderResults()
-      ) : currentQuestion ? (
+      ) : userQuestionDisplayMode === 'oneByOne' && currentQuestionOneByOne ? ( // One By One Display Mode
         <>
           <div className="mb-4 sm:mb-6">
             <div className="flex justify-between items-center text-sm text-[var(--text-secondary)] mb-1">
-              <span>Question {currentQuestionIndex + 1} of {quiz.questions.length}</span>
-              {isMcq && displayFeedback && (
-                   <span className={`font-semibold ${displayFeedback === 'Correct' ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]'}`}>
-                      {displayFeedback}
+              <span className="flex-1">Question {currentQuestionIndex + 1} of {quiz.questions.length}</span>
+              {/* Preferences button moved to header row */}
+              {isMcqOneByOne && feedbackTextForHeaderOneByOne && ( 
+                   <span className={`font-semibold flex-1 text-right ${feedbackTextForHeaderOneByOne === 'Correct' ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]'}`}>
+                      {feedbackTextForHeaderOneByOne}
                    </span>
               )}
             </div>
@@ -217,66 +241,97 @@ const UserView: React.FC<UserViewProps> = ({
             </div>
           </div>
           <QuestionDisplay
-            question={currentQuestion}
+            question={currentQuestionOneByOne}
             questionNumber={currentQuestionIndex + 1}
-            selectedOptionId={displaySelectedOptionId}
-            isSubmitted={isCurrentQuestionAnswered} 
-            onOptionSelect={onOptionSelect}
-            correctOptionIdForDisplay={isCurrentQuestionAnswered && isMcq ? currentQuestion.correctOptionId : undefined}
+            selectedOptionId={displaySelectedOptionIdOneByOne}
+            isSubmitted={questionDisplayIsSubmittedOneByOne} 
+            onOptionSelect={onOptionSelect} // Uses the general onOptionSelect for oneByOne
+            correctOptionIdForDisplay={feedbackTextForHeaderOneByOne && isMcqOneByOne ? currentQuestionOneByOne.correctOptionId : undefined}
           />
           
-          {/* Updated Navigation Bar */}
-          {!isQuizComplete && currentQuestion && (
-            <div className="mt-8 sm:mt-10 flex justify-between items-center">
-              {/* Previous Button Area */}
-              <div className="w-14 h-14 flex items-center justify-center">
-                {showPreviousIconButton && (
-                  <button
-                    onClick={onPreviousQuestion}
-                    className={iconButtonBaseClass}
-                    aria-label="Previous Question"
-                    title="Previous Question"
-                  >
-                    <i className="fa-solid fa-chevron-left fa-lg"></i>
-                  </button>
-                )}
-              </div>
-
-              {/* Central Submit Button Area (for MCQs) */}
-              <div className="flex-grow flex justify-center items-center min-h-[3.5rem] sm:min-h-[4rem]"> {/* min-h to prevent layout shift */}
-                {showCentralSubmitButton && (
-                  <button
-                    onClick={onSubmitAnswer}
-                    disabled={isCentralSubmitButtonDisabled}
-                    className={`${centralSubmitButtonClass} focus:ring-offset-[var(--bg-primary)]`}
-                    aria-label="Submit Answer"
-                    title="Submit Answer"
-                  >
-                    <i className="fa-solid fa-circle-check fa-xl"></i>
-                  </button>
-                )}
-              </div>
-
-              {/* Next / Finish Button Area */}
-              <div className="w-14 h-14 flex items-center justify-center">
-                {showNextOrFinishIconButton && (
-                  <button
-                    onClick={handleNextIconClick}
-                    disabled={isNextOrFinishIconDisabled}
-                    className={iconButtonBaseClass}
-                    aria-label={isLastQuestion ? "Finish Quiz" : "Next Question"}
-                    title={isLastQuestion ? "Finish Quiz" : "Next Question"}
-                  >
-                    <i className={`fa-solid ${isLastQuestion ? 'fa-flag-checkered' : 'fa-chevron-right'} fa-lg`}></i>
-                  </button>
-                )}
-              </div>
+          <div className="mt-8 sm:mt-10 flex justify-between items-center">
+            <div className="w-14 h-14 flex items-center justify-center">
+              {showPreviousIconButton && (
+                <button
+                  onClick={onPreviousQuestion}
+                  className={iconButtonBaseClass}
+                  aria-label="Previous Question"
+                  title="Previous Question"
+                >
+                  <i className="fa-solid fa-chevron-left fa-lg"></i>
+                </button>
+              )}
             </div>
-          )}
+
+            <div className="flex-grow flex justify-center items-center min-h-[3.5rem] sm:min-h-[4rem]">
+              {showCentralSubmitButtonOneByOne && (
+                <button
+                  onClick={onSubmitAnswer}
+                  disabled={isCentralSubmitButtonDisabledOneByOne}
+                  className={`${centralSubmitButtonClass} focus:ring-offset-[var(--bg-primary)]`}
+                  aria-label="Submit Answer"
+                  title="Submit Answer"
+                >
+                  <i className="fa-solid fa-circle-check fa-xl"></i>
+                </button>
+              )}
+            </div>
+
+            <div className="w-14 h-14 flex items-center justify-center">
+              {showNextOrFinishIconButtonOneByOne && (
+                <button
+                  onClick={handleNextIconClick}
+                  disabled={isNextOrFinishIconDisabledOneByOne}
+                  className={iconButtonBaseClass}
+                  aria-label={isLastQuestionInOneByOneMode ? "Finish Quiz" : "Next Question"}
+                  title={isLastQuestionInOneByOneMode ? "Finish Quiz" : "Next Question"}
+                >
+                  <i className={`fa-solid ${isLastQuestionInOneByOneMode ? 'fa-flag-checkered' : 'fa-chevron-right'} fa-lg`}></i>
+                </button>
+              )}
+            </div>
+          </div>
         </>
+      ) : userQuestionDisplayMode === 'listed' ? ( // Listed Display Mode
+        <div className="space-y-8">
+            {quiz.questions.map((question, index) => {
+                const answerObject = userAnswers[index];
+                const hasBeenAttempted = answerObject != null;
+                const hasBeenGraded = answerObject !== null && answerObject.feedback !== null;
+                const displayIsSubmitted = userCorrectionMode === 'immediate' ? hasBeenGraded : isQuizComplete;
+                const selectedOptId = hasBeenAttempted ? answerObject.selectedOptionId : null;
+                const correctOptId = (userCorrectionMode === 'immediate' || isQuizComplete) && hasBeenGraded && question.type === 'mcq'
+                                     ? question.correctOptionId
+                                     : undefined;
+
+                return (
+                    <div key={question.id} className="py-4 border-b border-[var(--border-color)] last:border-b-0">
+                        <QuestionDisplay
+                            question={question}
+                            questionNumber={index + 1}
+                            selectedOptionId={selectedOptId}
+                            isSubmitted={displayIsSubmitted}
+                            onOptionSelect={(optionId) => onListedOptionSelect(optionId, index)}
+                            correctOptionIdForDisplay={correctOptId}
+                        />
+                    </div>
+                );
+            })}
+            <div className="flex justify-center">
+                <button
+                    onClick={handleNextIconClick} // Re-use handleNextIconClick which handles quiz completion
+                    className={finishQuizButtonListedModeClass}
+                    aria-label="Finish Quiz"
+                    title="Finish Quiz"
+                >
+                    <i className="fa-solid fa-flag-checkered fa-lg mr-2"></i>
+                    Finish Quiz
+                </button>
+            </div>
+        </div>
       ) : (
          <div className="text-center py-6">
-            <p className="text-lg text-[var(--text-secondary)]">Loading question...</p>
+            <p className="text-lg text-[var(--text-secondary)]">Loading questions...</p>
          </div>
       )}
     </div>
