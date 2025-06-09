@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2025-06-09T16:12:30.594Z",
+  "lastUpdated": "2025-06-09T16:15:07.570Z",
   "subjects": [
     {
       "id": "mbpahr1cdp7bj8m37",
@@ -42,6 +42,16 @@
           "isStartable": true
         }
       ]
+    },
+    {
+      "id": "mbpam4uhr3dhhh6at",
+      "name": "جراحة",
+      "quizzes": []
+    },
+    {
+      "id": "mbpamalnl2vri67y2",
+      "name": "طب شرعي",
+      "quizzes": []
     }
   ]
 }
