@@ -33,11 +33,13 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
     Array(maxOptions).fill(null).map(() => ({ text: '' }))
   );
   const [correctOptionIndex, setCorrectOptionIndex] = useState<number | null>(null);
+  const [modelAnswer, setModelAnswer] = useState(''); // Added for written questions
   const [error, setError] = useState<string | null>(null);
 
   const resetFormFields = (isNewQuestion: boolean) => {
     setQuestionType(isNewQuestion ? 'mcq' : (existingQuestion?.type || 'mcq'));
     setQuestionText(isNewQuestion ? '' : (existingQuestion?.questionText || ''));
+    setModelAnswer(isNewQuestion ? '' : (existingQuestion?.modelAnswer || ''));
     
     if (!isNewQuestion && existingQuestion?.type === 'mcq' && existingQuestion?.options) {
       const newOptions = Array(maxOptions).fill(null).map(() => ({ text: '' }));
@@ -122,6 +124,7 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
         type: 'mcq',
         options: finalOptionsData,
         correctOptionId: finalCorrectOptionId,
+        modelAnswer: undefined, // MCQs don't have model answers
       };
     } else { // 'written' type
       questionPayload = {
@@ -129,6 +132,7 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
         type: 'written',
         options: undefined,
         correctOptionId: undefined,
+        modelAnswer: modelAnswer.trim() || undefined,
       };
     }
 
@@ -209,6 +213,23 @@ const QuestionForm: React.FC<QuestionFormProps> = ({
                       ))}
                   </div>
               </fieldset>
+            )}
+
+            {questionType === 'written' && (
+              <div>
+                <label htmlFor="modelAnswer" className={labelClass}>
+                  Model Answer (Optional)
+                </label>
+                <textarea
+                  id="modelAnswer"
+                  rows={4}
+                  value={modelAnswer}
+                  onChange={(e) => setModelAnswer(e.target.value)}
+                  className={inputClass}
+                  placeholder="Enter the model answer for this written question (optional)"
+                />
+                 <p className="text-xs text-[var(--text-secondary)] mt-1">This answer can be shown to users in the quiz.</p>
+              </div>
             )}
 
             {error && <p className="text-red-600 dark:text-red-400 text-sm mt-2">{error}</p>}

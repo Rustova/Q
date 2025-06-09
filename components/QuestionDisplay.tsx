@@ -1,5 +1,6 @@
 
-import React from 'react';
+
+import React, { useState } from 'react'; // Added useState
 import type { Question } from '../App.tsx'; 
 
 interface QuestionDisplayProps {
@@ -19,6 +20,12 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   onOptionSelect,
   correctOptionIdForDisplay,
 }) => {
+  const [isModelAnswerVisible, setIsModelAnswerVisible] = useState(false);
+
+  const toggleModelAnswerVisibility = () => {
+    setIsModelAnswerVisible(prev => !prev);
+  };
+
   return (
     <div>
       <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-[var(--text-primary)] whitespace-pre-wrap" id={`question-${question.id}-text`}>
@@ -85,8 +92,26 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
         </div>
       )}
       {question.type === 'written' && (
-        <div className="p-3 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md">
+        <div className="p-3 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-md space-y-3">
             <p className="text-[var(--text-primary)] italic">This is a written response question.</p>
+            {question.modelAnswer && question.modelAnswer.trim() !== '' && (
+              <div>
+                <button
+                  onClick={toggleModelAnswerVisibility}
+                  className="flex items-center space-x-2 text-sm text-[var(--accent-primary)] hover:text-[var(--accent-primary-hover)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)] rounded px-2 py-1 bg-[var(--bg-secondary)] border border-[var(--accent-secondary)] hover:border-[var(--accent-primary)]"
+                  aria-expanded={isModelAnswerVisible}
+                  aria-controls={`model-answer-${question.id}`}
+                >
+                  <i className={`fa-solid ${isModelAnswerVisible ? 'fa-angle-up' : 'fa-angle-down'} fa-fw`}></i>
+                  <span>{isModelAnswerVisible ? 'Hide Model Answer' : 'Show Model Answer'}</span>
+                </button>
+                {isModelAnswerVisible && (
+                  <div id={`model-answer-${question.id}`} className="mt-2 p-3 bg-[var(--bg-secondary)] border border-[var(--accent-secondary)] rounded-md">
+                    <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap">{question.modelAnswer}</p>
+                  </div>
+                )}
+              </div>
+            )}
         </div>
       )}
     </div>

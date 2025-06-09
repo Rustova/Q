@@ -1,30 +1,33 @@
 
-
 import React, { useState, useEffect, ChangeEvent, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { Subject, Quiz, Question as QuestionType, Option } from '../App.tsx';
 import jsPDF from 'jspdf';
-import QuizMultiSelectModal, { DisplayQuiz as MultiSelectDisplayQuiz } from './QuizRangeSelectionModal.tsx'; // Corrected import path
+import QuizMultiSelectModal, { DisplayQuiz as MultiSelectDisplayQuiz } from './QuizRangeSelectionModal.tsx';
 
 // Default color values mapping to CSS variables
 const defaultColors = {
-  title: '#233239',        // User requested: Dark Slate Blue/Grey
-  questionText: '#000000', // User requested: Black
-  answerText: '#474747',   // User requested: Dark Grey
-  correctAnswer: '#48BB78',// var(--accent-green) - Kept for correct answer highlight
+  title: '#233239',
+  questionText: '#000000',
+  answerText: '#474747',
+  correctAnswer: '#48BB78',
+  modelAnswerLabel: '#1a202c',
+  modelAnswerHighlightColor: '#cccccc', // Default light grey for highlight
 };
 
 export interface PdfExportPreferences {
   showAnswers: boolean;
-  fontSize: number; // Base font size for content pages
-  // layout: '1-column' | '2-column'; // Removed layout option
+  fontSize: number;
   colors: {
     title: string;
     questionText: string;
     answerText: string;
     correctAnswer: string;
+    modelAnswerLabel: string;
+    modelAnswerHighlightColor: string; // Added
   };
   selectedSubjectIds: string[];
+  modelAnswerHighlightOpacity: number; // Added (0-1)
 }
 
 interface PdfPreferencesModalProps {
@@ -38,12 +41,12 @@ const labelClass = "block text-sm font-medium text-[var(--text-secondary)] mb-1"
 const fieldsetLegendClass = "text-md font-semibold text-[var(--accent-primary)] mb-2";
 
 // PDF constants
-const PAGE_WIDTH_PT = 595.28; // A4 width in points
-const PAGE_HEIGHT_PT = 841.89; // A4 height in points
+const PAGE_WIDTH_PT = 595.28;
+const PAGE_HEIGHT_PT = 841.89;
 const MARGIN_PT = 40;
 const CONTENT_WIDTH_PT = PAGE_WIDTH_PT - 2 * MARGIN_PT;
 const LINE_HEIGHT_MULTIPLIER = 1.4;
-const COVER_PAGE_TEXT_COLOR = '#000000'; // Black
+const COVER_PAGE_TEXT_COLOR = '#000000';
 const COVER_PAGE_FONT_SIZE_PT = 18;
 const CONTENT_PAGE_START_Y = 135;
 
@@ -56,9 +59,9 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
   const [prefs, setPrefs] = useState<PdfExportPreferences>({
     showAnswers: true,
     fontSize: 12,
-    // layout: '1-column', // Removed layout option
     colors: { ...defaultColors } as PdfExportPreferences['colors'],
     selectedSubjectIds: [],
+    modelAnswerHighlightOpacity: 0.3, // Initial opacity
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [arabicFontLoaded, setArabicFontLoaded] = useState(false);
@@ -70,14 +73,14 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
       setPrefs({
         showAnswers: true,
         fontSize: 12,
-        // layout: '1-column', // Removed layout option
         colors: { ...defaultColors } as PdfExportPreferences['colors'],
         selectedSubjectIds: subjects.map(s => s.id),
+        modelAnswerHighlightOpacity: 0.3, // Reset opacity
       });
       setIsGenerating(false);
       setArabicFontLoaded(false);
       setShowQuizSelectModal(false);
-      setSelectedIndividualQuizIds(null); // Default to all quizzes from selected subjects
+      setSelectedIndividualQuizIds(null); 
     }
   }, [isOpen, subjects]);
 
@@ -109,8 +112,8 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
     if (type === 'checkbox') {
       const { checked } = e.target as HTMLInputElement;
       setPrefs(prev => ({ ...prev, [name]: checked }));
-    } else if (type === 'number') {
-      setPrefs(prev => ({ ...prev, [name]: parseInt(value, 10) }));
+    } else if (type === 'number' || (e.target as HTMLInputElement).step === '0.05') { // Handle opacity slider
+      setPrefs(prev => ({ ...prev, [name]: parseFloat(value) }));
     } else {
       setPrefs(prev => ({ ...prev, [name]: value }));
     }
@@ -128,7 +131,6 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
       const newSelectedSubjectIds = prev.selectedSubjectIds.includes(subjectId)
         ? prev.selectedSubjectIds.filter(id => id !== subjectId)
         : [...prev.selectedSubjectIds, subjectId];
-      // Reset individual quiz selection if subject selection changes
       setSelectedIndividualQuizIds(null); 
       return { ...prev, selectedSubjectIds: newSelectedSubjectIds };
     });
@@ -206,7 +208,6 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
       alert("Please select at least one subject to include in the PDF.");
       return;
     }
-    // Removed 2-column layout warning
 
     setIsGenerating(true);
     let fontActuallyLoaded = false;
@@ -238,7 +239,7 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
       let currentY = MARGIN_PT; 
       const subjectTitleRenderSize = prefs.fontSize * 1.5; 
 
-      const applyFontAndColor = (fontSize: number, color: string, isBold: boolean = false) => {
+      const applyFontAndColorForPdf = (fontSize: number, color: string, isBold: boolean = false) => {
         doc.setFontSize(fontSize);
         doc.setTextColor(color);
         if (fontActuallyLoaded) {
@@ -256,30 +257,75 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
         }
       };
 
-      const addWrappedText = (text: string, x: number, maxWidth: number, fontSize: number, color: string, isBold: boolean = false, isCoverPageText: boolean = false) => {
-        applyFontAndColor(fontSize, color, isBold);
+      const addWrappedText = (
+        text: string,
+        x: number,
+        maxWidth: number,
+        fontSize: number,
+        textColor: string,
+        isBold: boolean = false,
+        isCoverPageText: boolean = false,
+        highlightOptions?: { color: string; opacity: number }
+      ) => {
+        if (fontActuallyLoaded) {
+            doc.setFont('Amiri', isBold ? 'bold' : 'normal');
+        } else {
+            doc.setFont('Helvetica', isBold ? 'bold' : 'normal');
+        }
+        doc.setFontSize(fontSize);
+
         const lines = doc.splitTextToSize(text, maxWidth);
         const effectiveLineHeightMultiplier = isCoverPageText ? LINE_HEIGHT_MULTIPLIER * 1.1 : LINE_HEIGHT_MULTIPLIER;
-        const textHeight = lines.length * fontSize * (isBold ? 1.05 : 1.0) * effectiveLineHeightMultiplier * 0.8;
+        const singleLineTextHeight = fontSize * effectiveLineHeightMultiplier; 
+        
+        const totalBlockHeight = lines.length * singleLineTextHeight;
 
-        if (!isCoverPageText) checkAndAddPage(textHeight);
-        doc.text(lines, x, currentY);
-        currentY += textHeight + (fontSize * (effectiveLineHeightMultiplier * 0.2));
+        if (!isCoverPageText) {
+            checkAndAddPage(totalBlockHeight);
+        }
+        
+        if (highlightOptions && lines.some(line => line.trim() !== '')) {
+            doc.saveGraphicsState(); // Save current GState
+            doc.setFillColor(highlightOptions.color);
+            doc.setGState(new doc.GState({opacity: highlightOptions.opacity})); // Apply opacity
+
+            for (let i = 0; i < lines.length; i++) {
+                const lineText = lines[i];
+                if (lineText.trim() !== '') {
+                    const lineBaselineY = currentY + (i * singleLineTextHeight);
+                    const textWidth = doc.getStringUnitWidth(lineText) * fontSize / doc.internal.scaleFactor;
+                    const rectHeight = fontSize * 1.05; 
+                    const rectY = lineBaselineY - (fontSize * 0.82);
+                    doc.rect(x, rectY, textWidth, rectHeight, 'F');
+                }
+            }
+            doc.restoreGraphicsState(); // Restore GState (removes opacity and resets fill color)
+        }
+        
+        doc.setTextColor(textColor);
+        doc.text(lines, x, currentY); 
+
+        currentY += totalBlockHeight; 
+        if (!isCoverPageText) { 
+            currentY += (fontSize * (LINE_HEIGHT_MULTIPLIER * 0.15)); 
+        }
       };
 
       // --- Cover Page ---
       doc.addImage(mainPageImageBase64, 'PNG', 0, 0, PAGE_WIDTH_PT, PAGE_HEIGHT_PT, undefined, 'FAST');
       currentY = 416 + (COVER_PAGE_FONT_SIZE_PT * LINE_HEIGHT_MULTIPLIER * 1.1); 
-      applyFontAndColor(COVER_PAGE_FONT_SIZE_PT, COVER_PAGE_TEXT_COLOR, true);
+      applyFontAndColorForPdf(COVER_PAGE_FONT_SIZE_PT, COVER_PAGE_TEXT_COLOR, true);
       doc.text("Subjects included:", 28, 416); 
 
       const subjectsToDisplayOnCover = subjects.filter(s => prefs.selectedSubjectIds.includes(s.id));
       if (subjectsToDisplayOnCover.length > 0) {
         subjectsToDisplayOnCover.forEach(sub => {
-            if (currentY + (COVER_PAGE_FONT_SIZE_PT * LINE_HEIGHT_MULTIPLIER * 1.1) > PAGE_HEIGHT_PT - MARGIN_PT) { 
+            let tempYForCoverLine = currentY; 
+            if (tempYForCoverLine + (COVER_PAGE_FONT_SIZE_PT * LINE_HEIGHT_MULTIPLIER * 1.1) > PAGE_HEIGHT_PT - MARGIN_PT) { 
                 doc.addPage();
                 doc.addImage(regularPageImageBase64, 'PNG', 0, 0, PAGE_WIDTH_PT, PAGE_HEIGHT_PT, undefined, 'FAST'); 
                 currentY = CONTENT_PAGE_START_Y; 
+                tempYForCoverLine = currentY; 
             }
             addWrappedText(`- ${sub.name}`, MARGIN_PT + 20, CONTENT_WIDTH_PT - 20, COVER_PAGE_FONT_SIZE_PT, COVER_PAGE_TEXT_COLOR, false, true);
         });
@@ -303,9 +349,6 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
             });
         }
       });
-      // Ensure quizzesForExport are sorted by original subject order, then quiz order within subject.
-      // This is implicitly handled if `subjects` array is stable and iteration order is preserved.
-
 
       // --- Content Pages ---
       let isFirstContentPageAfterCover = true;
@@ -320,7 +363,7 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
           checkAndAddPage(estimatedHeightForNextQuiz); 
         }
         
-        const subjectNameMaxWidth = CONTENT_WIDTH_PT - (70 - MARGIN_PT);
+        const subjectNameMaxWidth = CONTENT_WIDTH_PT - (70 - MARGIN_PT); 
         addWrappedText(quiz.subjectName, 70, subjectNameMaxWidth, subjectTitleRenderSize, prefs.colors.title, true);
         currentY += prefs.fontSize * 0.2; 
         
@@ -343,6 +386,24 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
               addWrappedText(optionDisplay, MARGIN_PT + 20, CONTENT_WIDTH_PT - 20, prefs.fontSize * 0.9, optionColor);
               currentY += prefs.fontSize * 0.1;
             });
+          } else if (question.type === 'written' && prefs.showAnswers && question.modelAnswer && question.modelAnswer.trim() !== '') {
+            currentY += prefs.fontSize * 0.2; 
+            addWrappedText("Model Answer:", MARGIN_PT + 10, CONTENT_WIDTH_PT - 10, prefs.fontSize * 0.85, prefs.colors.modelAnswerLabel, true);
+            
+            addWrappedText(
+              question.modelAnswer,
+              MARGIN_PT + 20, 
+              CONTENT_WIDTH_PT - 20, 
+              prefs.fontSize * 0.9, 
+              prefs.colors.answerText, 
+              false, 
+              false, 
+              { 
+                color: prefs.colors.modelAnswerHighlightColor,
+                opacity: prefs.modelAnswerHighlightOpacity
+              }
+            );
+            currentY += prefs.fontSize * 0.1;
           }
           currentY += prefs.fontSize * 0.5; 
         });
@@ -380,6 +441,8 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
     { key: 'questionText', label: 'Question Text Color' },
     { key: 'answerText', label: 'Answer Text Color' },
     { key: 'correctAnswer', label: 'Correct Answer Highlight' },
+    { key: 'modelAnswerLabel', label: 'Model Answer Label Color' },
+    { key: 'modelAnswerHighlightColor', label: 'Model Ans. Highlight Bg' },
   ];
 
   const getQuizSelectionButtonText = () => {
@@ -435,7 +498,7 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
                 <label htmlFor="showAnswers" className="text-sm text-[var(--input-text)] cursor-pointer">Show Answers in PDF</label>
               </div>
               <div>
-                <label htmlFor="fontSize" className={labelClass}>Base Font Size (Content Pages)</label>
+                <label htmlFor="fontSize" className={labelClass}>Base Font Size (Content)</label>
                 <input
                   type="number"
                   id="fontSize"
@@ -446,15 +509,44 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
                   className={`${inputClass} w-full`}
                 />
               </div>
-              {/* Removed Layout Radio Buttons */}
+            </div>
+          </fieldset>
+          
+          <fieldset disabled={isGenerating}>
+            <legend className={fieldsetLegendClass}>Written Answer Highlight (PDF)</legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                <div>
+                    <label htmlFor="modelAnswerHighlightColor" className={labelClass}>Highlight Background Color</label>
+                    <input
+                        type="color"
+                        id="modelAnswerHighlightColor"
+                        name="modelAnswerHighlightColor"
+                        value={prefs.colors.modelAnswerHighlightColor}
+                        onChange={(e) => handleColorChange('modelAnswerHighlightColor', e.target.value)}
+                        className="w-full h-9 p-0.5 border rounded-md cursor-pointer bg-[var(--input-bg)] border-[var(--input-border)] focus:outline-none focus:ring-1 focus:ring-[var(--input-focus-ring)]"
+                    />
+                </div>
+                <div>
+                    <label htmlFor="modelAnswerHighlightOpacity" className={labelClass}>
+                        Highlight Opacity: <span className="font-mono text-[var(--accent-primary)]">{prefs.modelAnswerHighlightOpacity.toFixed(2)}</span>
+                    </label>
+                    <input
+                        type="range"
+                        id="modelAnswerHighlightOpacity"
+                        name="modelAnswerHighlightOpacity"
+                        min="0" max="1" step="0.05"
+                        value={prefs.modelAnswerHighlightOpacity}
+                        onChange={handleInputChange}
+                        className="w-full h-5 accent-[var(--accent-primary)] bg-[var(--input-bg)] rounded-lg appearance-none cursor-pointer"
+                    />
+                </div>
             </div>
           </fieldset>
 
           <fieldset disabled={isGenerating}>
-            <legend className={fieldsetLegendClass}>Color Scheme (Content Pages)</legend>
-            {/* Removed the specific paragraph about cover page text color and font size */}
+            <legend className={fieldsetLegendClass}>Color Scheme (Content Pages Text)</legend>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
-              {colorFields.map(field => (
+              {colorFields.filter(f => f.key !== 'modelAnswerHighlightColor').map(field => ( 
                 <div key={field.key}>
                   <label htmlFor={field.key} className={`${labelClass} truncate`} title={field.label}>{field.label}</label>
                   <input

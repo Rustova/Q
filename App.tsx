@@ -30,6 +30,7 @@ interface Question {
   type: 'mcq' | 'written';
   options?: Option[];
   correctOptionId?: string;
+  modelAnswer?: string; // Added for written questions
 }
 
 interface Quiz {
@@ -505,8 +506,13 @@ const App: React.FC = () => {
     setEditingQuestion(question);
   };
 
-  const handleAddQuestion = (subjectId: string, quizId: string, questionData: Omit<Question, 'id'>) => {
-    const newQuestion: Question = { ...questionData, id: generateId() };
+  const handleAddQuestion = (subjectId: string, quizId: string, questionData: Omit<Question, 'id'> & { modelAnswer?: string }) => {
+    const newQuestion: Question = { 
+        ...questionData, 
+        id: generateId(),
+        modelAnswer: questionData.modelAnswer || undefined 
+    };
+
     if(newQuestion.type === 'mcq' && newQuestion.options) {
         newQuestion.options = newQuestion.options.map((opt, index) => ({...opt, id: `option-${generateId()}-${index}`}));
         const correctOptTextFromPayload = questionData.options?.find(o => o.id === questionData.correctOptionId)?.text;
