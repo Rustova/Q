@@ -219,7 +219,7 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
       });
 
       try {
-        const amiriFontBase64Raw = await loadFileAsBase64('/assets/Amiri-Regular.ttf', 'data:application/octet-stream;base64,');
+        const amiriFontBase64Raw = await loadFileAsBase64('https://rustova.github.io/Q/assets/Amiri-Regular.ttf', 'data:font/ttf;base64,');
         const amiriFontBase64 = amiriFontBase64Raw.substring(amiriFontBase64Raw.indexOf(',') + 1);
         doc.addFileToVFS('Amiri-Regular.ttf', amiriFontBase64);
         doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
@@ -232,8 +232,8 @@ const PdfPreferencesModal: React.FC<PdfPreferencesModalProps> = ({
         doc.setFont('Helvetica', 'normal');
       }
 
-      const mainPageImageBase64 = await loadFileAsBase64('/assets/main.PNG', 'data:image/png;base64,');
-      const regularPageImageBase64 = await loadFileAsBase64('/assets/regular.PNG', 'data:image/png;base64,');
+      const mainPageImageBase64 = await loadFileAsBase64('https://rustova.github.io/Q/assets/main.PNG', 'data:image/png;base64,');
+      const regularPageImageBase64 = await loadFileAsBase64('https://rustova.github.io/Q/assets/regular.PNG', 'data:image/png;base64,');
 
       let currentY = MARGIN_PT; 
       const subjectTitleRenderSize = prefs.fontSize * 1.5; 
