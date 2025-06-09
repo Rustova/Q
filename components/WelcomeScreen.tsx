@@ -43,7 +43,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onInteraction }) => {
 
   return (
     <div
-      className={`fixed inset-0 bg-[var(--bg-secondary)] flex flex-col items-center justify-center z-[1001] transition-opacity duration-700 ease-in-out
+      className={`fixed inset-0 bg-black flex flex-col items-center justify-center z-[1001] transition-opacity duration-700 ease-in-out
                   ${isFadingOut ? 'welcome-screen-fading-out' : 'opacity-100'}
                   ${showTapPrompt ? 'cursor-pointer' : 'cursor-default'}`} // Conditional cursor
       onClick={handleScreenClick}
@@ -85,9 +85,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onInteraction }) => {
             height: 100px; 
             width: 100px;
             border-width: 3px;
-            border-color: var(--bg-secondary);
+            /* Changed border color to be visible on black, e.g., using accent-primary or a light gray */
+            border-color: var(--accent-primary); 
             background-color: var(--text-primary);
-            color: var(--bg-primary); 
+             /* Text color for 'Q' might need adjustment if --bg-primary is too dark for black */
+            color: var(--bg-secondary); /* Using --bg-secondary which is #161616, should be ok on light beige bg of Q */
             font-size: 4rem; 
             animation: pulseLogo 2.5s infinite ease-in-out;
             z-index: 10; /* Above circles */
