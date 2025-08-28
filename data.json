@@ -1,1 +1,46 @@
-{}
+[
+  {
+    "id": "sub-1700000000000",
+    "name": "Biology",
+    "lectures": [
+      {
+        "id": "lec-1710000000000",
+        "name": "Cellular Respiration",
+        "questions": [
+          {
+            "id": "lib-1711000000000-0.123",
+            "question": "What is the primary energy currency of the cell?",
+            "options": [
+              "Glucose",
+              "ATP",
+              "NADPH",
+              "Oxygen"
+            ],
+            "correctAnswer": 1
+          },
+          {
+            "id": "lib-1711000000000-0.456",
+            "question": "Where does glycolysis occur?",
+            "options": [
+              "Mitochondria",
+              "Nucleus",
+              "Cytoplasm",
+              "Endoplasmic Reticulum"
+            ],
+            "correctAnswer": 2
+          }
+        ]
+      },
+      {
+        "id": "lec-1720000000000",
+        "name": "Photosynthesis",
+        "questions": []
+      }
+    ]
+  },
+  {
+    "id": "sub-1800000000000",
+    "name": "History",
+    "lectures": []
+  }
+]
