@@ -2,6 +2,12 @@
   {
     "id": "sub-1756393661853",
     "name": "surgery",
-    "lectures": []
+    "lectures": [
+      {
+        "id": "lec-1756393666552",
+        "name": "hernia",
+        "questions": []
+      }
+    ]
   }
 ]
