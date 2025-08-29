@@ -4,13 +4,13 @@
     "name": "Surgery",
     "lectures": [
       {
-        "id": "lec-1756434466102",
-        "name": "Abdominal incisions",
+        "id": "lec-1756434458259",
+        "name": "hernia",
         "questions": []
       },
       {
-        "id": "lec-1756434458259",
-        "name": "hernia",
+        "id": "lec-1756434466102",
+        "name": "Abdominal incisions",
         "questions": []
       },
       {
