@@ -3,5 +3,10 @@
     "id": "sub-1756433083605",
     "name": "Surgery",
     "lectures": []
+  },
+  {
+    "id": "sub-1756433089598",
+    "name": "Medicine",
+    "lectures": []
   }
 ]
