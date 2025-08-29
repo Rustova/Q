@@ -16,19 +16,7 @@
       {
         "id": "lec-1756434458259",
         "name": "hernia",
-        "questions": [
-          {
-            "question": "A 29-year female presented with a 1.5 cm right breast cancer and clinically and radiologically negative ipsilateral axillary lymph node for metastasis. What is the proper surgical option?",
-            "options": [
-              "Lumpectomy",
-              "Breast conservative surgery with axillary dissection",
-              "Breast conservative surgery with sentinel node biopsy",
-              "Right modified radical mastectomy"
-            ],
-            "id": "lib-1756455066077-0.423784330287965",
-            "correctAnswer": 3
-          }
-        ]
+        "questions": []
       }
     ]
   },
