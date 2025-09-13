@@ -11,7 +11,28 @@
       {
         "id": "lec-1757517901646",
         "name": "Hernia",
-        "questions": []
+        "questions": [
+          {
+            "question": "Irreducible hernia can be presented by any of the following EXCEPT",
+            "options": [
+              "Not tense.",
+              "Not tender.",
+              "No sign of intestinal obstruction",
+              "Lost impulse on cough."
+            ],
+            "id": "lib-1757751440925-0.22666755331378408"
+          },
+          {
+            "question": "Direct hernia:",
+            "options": [
+              "Passes through the internal ring.",
+              "Usually descends to scrotum",
+              "Passes through the external ring",
+              "Is more common than indirect one"
+            ],
+            "id": "lib-1757751440925-0.38972805165198565"
+          }
+        ]
       },
       {
         "id": "lec-1757517907641",
