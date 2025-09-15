@@ -4,6 +4,11 @@
     "name": "Surgery",
     "lectures": [
       {
+        "id": "lec-1757517907641",
+        "name": "Breast cancer",
+        "questions": []
+      },
+      {
         "id": "lec-1757517901646",
         "name": "Hernia",
         "questions": [
@@ -75,11 +80,6 @@
             "id": "lib-1757953338936-0.32319336444815217"
           }
         ]
-      },
-      {
-        "id": "lec-1757517907641",
-        "name": "Breast cancer",
-        "questions": []
       },
       {
         "id": "lec-1757517920166",
