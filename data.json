@@ -50,6 +50,18 @@
             "question": "Mention FOUR differences between Direct and Indirect inguinal hernia.",
             "answer": "",
             "id": "lib-1757952871966-0.14570013471596"
+          },
+          {
+            "type": "mcq",
+            "question": "1) A 65-year-old man presents with a painless swelling in the right groin that increases on coughing and reduces on lying down. On examination, the swelling emerges lateral to the inferior epigastric vessels. What is the most likely diagnosis?",
+            "options": [
+              "Direct inguinal hernia",
+              "Indirect inguinal hernia",
+              "Femoral hernia",
+              "Hydrocele"
+            ],
+            "id": "lib-1757953075656-0.15117333428324808",
+            "correctAnswer": 2
           }
         ]
       },
