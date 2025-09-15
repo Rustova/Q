@@ -120,7 +120,32 @@
       {
         "id": "lec-1757955751779",
         "name": "another lecture  edittt",
-        "questions": []
+        "questions": [
+          {
+            "type": "mcq",
+            "question": "1) A 65-year-old man presents with a painless swelling in the right groin that increases on coughing and reduces on lying down. On examination, the swelling emerges lateral to the inferior epigastric vessels. What is the most likely diagnosis?",
+            "options": [
+              "Direct inguinal hernia",
+              "Indirect inguinal hernia",
+              "Femoral hernia",
+              "Hydrocele"
+            ],
+            "id": "lib-1757955803200-0.9120259339527428",
+            "correctAnswer": 1
+          },
+          {
+            "type": "short_answer",
+            "question": "Describe boundaries and contents of the inguinal canal.",
+            "answer": "",
+            "id": "lib-1757955803200-0.45896881475581763"
+          },
+          {
+            "type": "short_answer",
+            "question": "Mention FOUR differences between Direct and Indirect inguinal hernia.",
+            "answer": "",
+            "id": "lib-1757955803200-0.5563491874248673"
+          }
+        ]
       }
     ]
   }
