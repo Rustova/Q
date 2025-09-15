@@ -113,11 +113,6 @@
     "name": "subject",
     "lectures": [
       {
-        "id": "lec-1757955462013",
-        "name": "A lecture",
-        "questions": []
-      },
-      {
         "id": "lec-1757955468582",
         "name": "B lecture",
         "questions": [
@@ -146,6 +141,11 @@
             "id": "lib-1757955519736-0.2985388139538364"
           }
         ]
+      },
+      {
+        "id": "lec-1757955462013",
+        "name": "A lecture",
+        "questions": []
       },
       {
         "id": "lec-1757955472617",
