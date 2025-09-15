@@ -116,6 +116,11 @@
         "id": "lec-1757955462013",
         "name": "A lecture",
         "questions": []
+      },
+      {
+        "id": "lec-1757955468582",
+        "name": "B lecture",
+        "questions": []
       }
     ]
   }
