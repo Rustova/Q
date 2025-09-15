@@ -120,7 +120,20 @@
       {
         "id": "lec-1757953439350",
         "name": "another lecture 1",
-        "questions": []
+        "questions": [
+          {
+            "type": "mcq",
+            "question": "1) A 65-year-old man presents with a painless swelling in the right groin that increases on coughing and reduces on lying down. On examination, the swelling emerges lateral to the inferior epigastric vessels. What is the most likely diagnosis?",
+            "options": [
+              "Direct inguinal hernia",
+              "Indirect inguinal hernia",
+              "Femoral hernia",
+              "Hydrocele"
+            ],
+            "id": "lib-1757953481315-0.8159335173074111",
+            "correctAnswer": 1
+          }
+        ]
       }
     ]
   }
