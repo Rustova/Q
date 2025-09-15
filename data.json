@@ -111,6 +111,12 @@
   {
     "id": "sub-1757955738531",
     "name": "A subject",
-    "lectures": []
+    "lectures": [
+      {
+        "id": "lec-1757955746351",
+        "name": "A lecture",
+        "questions": []
+      }
+    ]
   }
 ]
